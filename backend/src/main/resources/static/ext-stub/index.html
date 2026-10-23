@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>外接模块壳</title>
+<style>
+html,body{margin:0;height:100%;background:#f3f7f9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:#1f3a4d}
+.wrap{padding:28px 32px}
+.tag{display:inline-block;background:#e8f6fb;color:#2b8fb6;border:1px solid #b7e0ef;border-radius:999px;padding:4px 12px;font-size:12px;margin-bottom:12px}
+h1{margin:0 0 8px;font-size:22px;font-weight:650;color:#145860}
+.lead{margin:0 0 24px;font-size:13px;color:#6a8494;line-height:1.7}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.card{background:#fff;border:1px solid #d7e6ee;border-radius:10px;padding:18px 16px}
+.card b{display:block;font-size:22px;color:#3ba8d0;margin-bottom:6px}
+.card span{font-size:12px;color:#6a8494}
+.note{margin-top:22px;padding:14px 16px;background:#fff;border-left:4px solid #14afe7;border-radius:6px;font-size:13px;line-height:1.7;color:#35586a}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:#e8f6fb;padding:1px 6px;border-radius:4px}
+@media (max-width:800px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="tag">外接模块壳 · 非业务功能</div>
+  <h1 id="name">演示外接模块</h1>
+  <p class="lead">客户仍走同一域名路径。生产由网关把本路径转到内网模块机，不另写公网 A 记录。</p>
+  <div class="grid">
+    <div class="card"><b>—</b><span>业务功能未植入</span></div>
+    <div class="card"><b>壳</b><span>仅验证入口与跳转</span></div>
+    <div class="card"><b>内网</b><span>模块机不暴露公网</span></div>
+  </div>
+  <div class="note">
+    当前看到的是本地壳。真正模块上云后，把 <code>TM_APP_OPEN.TARGET_URL</code> 写成内网地址，网关热挂同一路径即可。
+    编码：<code id="code">DEMO_SHELL</code>
+  </div>
+</div>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var name = q.get("name");
+  var code = q.get("code");
+  if (name) document.getElementById("name").textContent = name;
+  if (code) document.getElementById("code").textContent = code;
+})();
+</script>
+</body>
+</html>

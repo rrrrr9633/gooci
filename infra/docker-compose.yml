@@ -1,0 +1,24 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: gooci-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: gooci_root
+      MYSQL_DATABASE: gooci
+      MYSQL_USER: gooci
+      MYSQL_PASSWORD: gooci_pwd
+    ports:
+      - "13306:3306"
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
+    volumes:
+      - gooci-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pgooci_root"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+volumes:
+  gooci-mysql-data:

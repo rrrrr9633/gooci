@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GOOCI 文档</title>
+<style>
+:root {
+  --sky: #5ec0e4;
+  --sky-deep: #3ba8d0;
+  --ink: #1f2d3d;
+  --muted: #5d7380;
+  --line: #d7e8ef;
+  --paper: #f4fafc;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; font-family: "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--ink); background: var(--paper); }
+.wrap { display: flex; min-height: 100%; }
+nav {
+  width: 260px; flex-shrink: 0; background: #fff; border-right: 1px solid var(--line);
+  padding: 18px 12px 32px; position: sticky; top: 0; height: 100vh; overflow: auto;
+}
+.brand { font-weight: 700; font-size: 18px; color: var(--sky-deep); padding: 4px 10px 16px; }
+.group { font-size: 11px; color: var(--muted); letter-spacing: .08em; padding: 12px 10px 6px; }
+nav a {
+  display: block; color: var(--ink); text-decoration: none; padding: 7px 10px; border-radius: 8px; font-size: 13px;
+}
+nav a:hover, nav a.on { background: #e8f6fb; color: var(--sky-deep); }
+main { flex: 1; padding: 36px 48px 80px; max-width: 980px; }
+.page { display: none; }
+.page.on { display: block; }
+h1 { font-size: 28px; margin: 0 0 16px; }
+h2 { font-size: 20px; margin: 32px 0 12px; padding-top: 8px; border-top: 1px solid var(--line); }
+h3 { font-size: 16px; margin: 22px 0 8px; }
+h4 { font-size: 14px; margin: 16px 0 6px; color: #246a86; }
+p, li { line-height: 1.75; font-size: 14px; }
+ul, ol { padding-left: 22px; }
+table { border-collapse: collapse; width: 100%; margin: 12px 0 20px; font-size: 13px; background: #fff; }
+th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background: #e8f6fb; color: #246a86; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; background: #eef6f9; padding: 1px 5px; border-radius: 4px; }
+pre { background: #163a48; color: #e8f6fb; padding: 14px 16px; border-radius: 10px; overflow: auto; font-size: 12px; line-height: 1.55; }
+pre code { background: none; color: inherit; padding: 0; }
+hr { border: 0; border-top: 1px solid var(--line); margin: 24px 0; }
+a { color: var(--sky-deep); }
+.top { height: 8px; background: var(--sky); position: sticky; top: 0; z-index: 5; }
+</style>
+</head>
+<body>
+<div class="top"></div>
+<div class="wrap">
+<nav>
+<div class="brand">GOOCI 文档</div>
+<div class="group">接口</div>
+<a href="#api">接口文档</a>
+<div class="group">架构</div>
+<a href="#arch">架构复习 · 目录</a>
+<a href="#arch-01">01 产品形态与交付</a>
+<a href="#arch-02">02 模块植入与不停机</a>
+<a href="#arch-03">03 域名备案与客户账号</a>
+<a href="#arch-04">04 云服务器拼法</a>
+<a href="#arch-05">05 小程序与数据接入</a>
+<a href="#arch-06">06 磁盘与200G</a>
+<a href="#arch-07">07 总图与口诀</a>
+</nav>
+<main>
+  <article class="page" id="api"><h1>接口文档</h1>
+<p>版本与代码同步：<code>gooci-console 0.1.0</code>。当前后端只实现下列接口，本文按实现逐字段列出。未实现的能力在文末「明确没有」一节，避免误用。</p>
+<p>机器可读副本：同目录 <code>openapi.yaml</code>。</p>
+<h2>1. 基址</h2>
+<table><thead><tr><th>场景</th><th>基址</th></tr></thead><tbody><tr><td>浏览器经 Vite 开发代理</td><td><code>http://127.0.0.1:5173</code>，路径仍以 <code>/api</code> 开头，由 Vite 转到 <code>http://127.0.0.1:8080</code></td></tr><tr><td>直连后端</td><td><code>http://127.0.0.1:8080</code></td></tr><tr><td>Content-Type</td><td>请求体 JSON 用 <code>application/json;charset=UTF-8</code></td></tr><tr><td>字符集</td><td>UTF-8</td></tr><tr><td>时区</td><td><code>Asia/Shanghai</code></td></tr></tbody></table>
+<p>前端 <code>axios</code>：<code>baseURL=/api</code>，超时 15000ms。下文路径一律写完整 <code>/api/...</code>。</p>
+<h2>2. 统一信封 <code>ApiResult</code></h2>
+<p>所有业务接口（含失败）的 JSON 外壳：</p>
+<table><thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><td><code>code</code></td><td>number</td><td><code>0</code> 成功；<code>1</code> 失败</td></tr><tr><td><code>message</code></td><td>string</td><td>成功固定 <code>&quot;ok&quot;</code>；失败为原因文案</td></tr><tr><td><code>data</code></td><td>object / null</td><td>成功为业务体；失败为 <code>null</code> 或不出现</td></tr></tbody></table>
+<p>成功 HTTP 状态码为 <code>200</code>。业务失败（校验、账号密码错误等）也是 <strong>HTTP 200 + <code>code=1</code></strong>，不要只看 HTTP 状态。</p>
+<p>未登录访问受保护接口：HTTP <strong>401</strong>，body 仍是信封：</p>
+<pre><code>{ &quot;code&quot;: 1, &quot;message&quot;: &quot;未登录或登录已过期&quot;, &quot;data&quot;: null }</code></pre>
+<h2>3. 鉴权</h2>
+<table><thead><tr><th>项</th><th>约定</th></tr></thead><tbody><tr><td>算法</td><td>JWT，HMAC-SHA，密钥 <code>gooci.jwt-secret</code></td></tr><tr><td>有效期</td><td>12 小时（<code>gooci.jwt-expire-hours</code>）</td></tr><tr><td>传递</td><td>请求头 <code>Authorization: Bearer &lt;token&gt;</code></td></tr><tr><td>无刷新令牌</td><td>token 过期必须重新登录</td></tr><tr><td>无服务端登出</td><td>前端清 <code>localStorage.gooci-token</code> 即退出</td></tr></tbody></table>
+<p>匿名可访问：</p>
+<ul>
+<li><code>OPTIONS /**</code></li>
+<li><code>POST /api/auth/login</code></li>
+<li><code>POST /api/auth/sms</code></li>
+<li><code>POST /api/auth/register</code></li>
+<li><code>GET /api/site/meta</code></li>
+<li><code>POST /api/ops/auth/login</code></li>
+</ul>
+<p>其余 <code>/api/**</code> 必须带有效 Bearer。非法/过期 token 视为未登录，返回 401。</p>
+<p>企业 token（无 <code>scope</code> 或 <code>scope=enter</code>）不能调 <code>/api/ops/<strong></code>。厂商 token（<code>scope=ops</code>）不能调 <code>/api/console/</strong></code>。厂商退出清 <code>localStorage.gooci-ops-token</code>。</p>
+<p>跨域（直连 8080 时）：允许来源 <code>http://127.0.0.1:5173</code>、<code>http://localhost:5173</code>；方法 GET/POST/PUT/DELETE/OPTIONS；允许携带 Cookie 头。开发走 Vite 代理时不依赖 CORS。</p>
+<h2>4. 接口清单</h2>
+<table><thead><tr><th>方法</th><th>路径</th><th>鉴权</th><th>说明</th></tr></thead><tbody><tr><td>GET</td><td><code>/api/site/meta</code></td><td>否</td><td>官网顶栏：品牌名、客服电话</td></tr><tr><td>POST</td><td><code>/api/auth/login</code></td><td>否</td><td>登录，签发 token，返回会话</td></tr><tr><td>POST</td><td><code>/api/auth/sms</code></td><td>否</td><td>发送注册短信验证码（演示回显 demoCode）</td></tr><tr><td>POST</td><td><code>/api/auth/register</code></td><td>否</td><td>企业/个人注册，成功即登录</td></tr><tr><td>GET</td><td><code>/api/console/session</code></td><td>是</td><td>按 token 取当前会话（不含 token）</td></tr><tr><td>GET</td><td><code>/api/console/overview</code></td><td>是</td><td>工作台首页数字。未读站内信、待办条数来自库；设备数仍为 0</td></tr><tr><td>GET</td><td><code>/api/console/profile</code></td><td>是</td><td>当前用户个人信息与已开通应用</td></tr><tr><td>POST</td><td><code>/api/console/profile/name</code></td><td>是</td><td>改自己的姓名</td></tr><tr><td>POST</td><td><code>/api/console/profile/mail</code></td><td>是</td><td>改或清空自己的邮箱</td></tr><tr><td>POST</td><td><code>/api/console/profile/password</code></td><td>是</td><td>改自己的登录密码</td></tr><tr><td>GET</td><td><code>/api/console/org/enterprise</code></td><td>是</td><td>企业信息</td></tr><tr><td>POST</td><td><code>/api/console/org/enterprise</code></td><td>是</td><td>完善企业资料</td></tr><tr><td>GET</td><td><code>/api/console/org/structure</code></td><td>是</td><td>企业组织管理（企业 + 管理员）</td></tr><tr><td>GET</td><td><code>/api/console/org/staff</code></td><td>是</td><td>可选管理员名单（本企业非管理员）</td></tr><tr><td>POST</td><td><code>/api/console/org/admins</code></td><td>是</td><td>从已有人员提升为企业管理员</td></tr><tr><td>POST</td><td><code>/api/console/org/admins/remove</code></td><td>是</td><td>移除企业管理员</td></tr><tr><td>GET</td><td><code>/api/console/org/cert</code></td><td>是</td><td>实名认证进度</td></tr><tr><td>GET</td><td><code>/api/console/org/cert/biz</code></td><td>是</td><td>工商登记变更表</td></tr><tr><td>POST</td><td><code>/api/console/org/cert/biz</code></td><td>是</td><td>提交工商登记变更申请（待厂商审核）</td></tr><tr><td>GET</td><td><code>/api/console/org/cert/bank</code></td><td>是</td><td>银行账户变更表</td></tr><tr><td>POST</td><td><code>/api/console/org/cert/bank</code></td><td>是</td><td>提交银行账户变更申请（待厂商审核）</td></tr><tr><td>POST</td><td><code>/api/console/org/cert/file</code></td><td>是</td><td>上传认证附件（≤4M）</td></tr><tr><td>GET</td><td><code>/api/console/org/cert/file/{fileId}</code></td><td>是</td><td>读取本企业认证附件</td></tr><tr><td>GET</td><td><code>/api/console/org/depts</code></td><td>是</td><td>部门管理看板（树、设备、成员）</td></tr><tr><td>POST</td><td><code>/api/console/org/depts</code></td><td>是</td><td>新增或编辑部门</td></tr><tr><td>POST</td><td><code>/api/console/org/depts/disable</code></td><td>是</td><td>禁用部门</td></tr><tr><td>POST</td><td><code>/api/console/org/depts/enable</code></td><td>是</td><td>启用部门</td></tr><tr><td>POST</td><td><code>/api/console/org/devices</code></td><td>是</td><td>按序列号给部门挂设备（兼容）</td></tr><tr><td>GET</td><td><code>/api/console/org/devices/pool</code></td><td>是</td><td>部门待分配 / 已分配设备池</td></tr><tr><td>POST</td><td><code>/api/console/org/devices/assign</code></td><td>是</td><td>确认部门已分配设备列表</td></tr><tr><td>POST</td><td><code>/api/console/org/devices/remove</code></td><td>是</td><td>从部门移除设备</td></tr><tr><td>POST</td><td><code>/api/console/org/members</code></td><td>是</td><td>新建账号到部门（短信校验）</td></tr><tr><td>POST</td><td><code>/api/console/org/members/assign</code></td><td>是</td><td>把已有人员绑定到部门</td></tr><tr><td>POST</td><td><code>/api/console/org/members/remove</code></td><td>是</td><td>从部门移除成员</td></tr><tr><td>GET</td><td><code>/api/console/staff</code></td><td>是</td><td>员工管理看板（列表、列、字段、编号规则、部门）</td></tr><tr><td>POST</td><td><code>/api/console/staff</code></td><td>是</td><td>新增或编辑员工</td></tr><tr><td>POST</td><td><code>/api/console/staff/remove</code></td><td>是</td><td>删除员工</td></tr><tr><td>POST</td><td><code>/api/console/staff/code-rule</code></td><td>是</td><td>保存员工编号规则</td></tr><tr><td>POST</td><td><code>/api/console/staff/columns</code></td><td>是</td><td>保存列表可见列</td></tr><tr><td>POST</td><td><code>/api/console/staff/fields</code></td><td>是</td><td>新增或编辑自定义字段</td></tr><tr><td>POST</td><td><code>/api/console/staff/fields/remove</code></td><td>是</td><td>删除自定义字段</td></tr><tr><td>GET</td><td><code>/api/console/staff/template</code></td><td>是</td><td>下载员工导入 xlsx 模板</td></tr><tr><td>POST</td><td><code>/api/console/staff/import-headers</code></td><td>是</td><td>读取导入表头，供字段映射</td></tr><tr><td>POST</td><td><code>/api/console/staff/import</code></td><td>是</td><td>按模板导入员工</td></tr><tr><td>GET</td><td><code>/api/console/devices</code></td><td>是</td><td>设备管理看板（列表、列、字段、部门、包机人）</td></tr><tr><td>POST</td><td><code>/api/console/devices</code></td><td>是</td><td>新增或编辑设备</td></tr><tr><td>POST</td><td><code>/api/console/devices/remove</code></td><td>是</td><td>删除设备</td></tr><tr><td>POST</td><td><code>/api/console/devices/columns</code></td><td>是</td><td>保存列表可见列</td></tr><tr><td>POST</td><td><code>/api/console/devices/fields</code></td><td>是</td><td>新增或编辑自定义字段</td></tr><tr><td>POST</td><td><code>/api/console/devices/fields/remove</code></td><td>是</td><td>删除自定义字段</td></tr><tr><td>POST</td><td><code>/api/console/devices/sync</code></td><td>是</td><td>按采集盒编码刷新是否联网</td></tr><tr><td>GET</td><td><code>/api/console/devices/template</code></td><td>是</td><td>下载设备导入 xlsx 模板</td></tr><tr><td>POST</td><td><code>/api/console/devices/import-headers</code></td><td>是</td><td>读取导入表头，供字段映射</td></tr><tr><td>POST</td><td><code>/api/console/devices/import</code></td><td>是</td><td>按模板导入设备</td></tr><tr><td>GET</td><td><code>/api/console/perm/roles</code></td><td>是</td><td>功能角色 / 数据角色列表。<code>kind</code>=<code>FUNC</code> 或 <code>DATA</code>；<code>appCode</code> 筛选已开通 APP，空为全部。查询即筛选</td></tr><tr><td>POST</td><td><code>/api/console/perm/roles</code></td><td>是</td><td>创建功能角色或数据角色（挂到已开通 APP）</td></tr><tr><td>GET</td><td><code>/api/console/perm/auth</code></td><td>是</td><td>账号授权列表。<code>keyword</code> 筛手机号或姓名</td></tr><tr><td>GET</td><td><code>/api/console/perm/auth/detail</code></td><td>是</td><td>账号授权详情（人员 + 已开通 APP）</td></tr><tr><td>POST</td><td><code>/api/console/perm/auth</code></td><td>是</td><td>给账号写入某类角色。<code>items</code> 为本次勾选的 APP 全集</td></tr><tr><td>GET</td><td><code>/api/console/biz/apps</code></td><td>是</td><td>工业 APP 快捷入口。只返回已植入且带入口路径的模块</td></tr><tr><td>POST</td><td><code>/api/console/biz/apps/hide</code></td><td>是</td><td>配置入口：按本次勾选写入隐藏标记</td></tr><tr><td>POST</td><td><code>/api/console/biz/apps/admin</code></td><td>是</td><td>给某模块指定管理员（写入该模块功能角色）</td></tr><tr><td>GET</td><td><code>/api/console/todo</code></td><td>是</td><td>待办任务列表。原理未定，当前无写入，返回空列表</td></tr><tr><td>GET</td><td><code>/api/console/inbox</code></td><td>是</td><td>站内信列表。与工作台「消息动态」同源。<code>readFlag</code> / <code>rangeCode</code> / <code>appCode</code> 筛选</td></tr><tr><td>POST</td><td><code>/api/console/inbox/read</code></td><td>是</td><td>勾选标记已读。未选时报「请先选择要操作的消息！」</td></tr><tr><td>POST</td><td><code>/api/console/inbox/remove</code></td><td>是</td><td>勾选删除站内信。未选同上。无自动推送接口</td></tr><tr><td>POST</td><td><code>/api/ops/auth/login</code></td><td>否</td><td>厂商运营登录。签发 <code>scope=ops</code></td></tr><tr><td>GET</td><td><code>/api/ops/session</code></td><td>厂商</td><td>当前运营账号</td></tr><tr><td>GET</td><td><code>/api/ops/site</code></td><td>厂商</td><td>客服电话等全局参数</td></tr><tr><td>POST</td><td><code>/api/ops/site</code></td><td>厂商</td><td>保存客服电话。空则顶栏显示「预留」</td></tr><tr><td>GET</td><td><code>/api/ops/enters</code></td><td>厂商</td><td>全部企业概览</td></tr><tr><td>GET</td><td><code>/api/ops/apps</code></td><td>厂商</td><td>某企业已植入模块。<code>enterId</code> 必填。无入口路径的旧演示行不返回</td></tr><tr><td>POST</td><td><code>/api/ops/apps</code></td><td>厂商</td><td>改隐藏标记与 TARGET_URL</td></tr><tr><td>POST</td><td><code>/api/ops/apps/implant</code></td><td>厂商</td><td>给某企业植入模块，写 <code>TM_APP_OPEN</code>。不是模块自注册</td></tr><tr><td>GET</td><td><code>/api/ops/icons</code></td><td>厂商</td><td>已植入模块图标一览。单独上传下版本</td></tr><tr><td>GET</td><td><code>/api/ops/changes</code></td><td>厂商</td><td>工商/银行待处理申请。不过审</td></tr></tbody></table>
+<h2>5. GET <code>/api/site/meta</code></h2>
+<p>官网公开信息。不登录可调。工作台也会调一次，用于顶栏电话。</p>
+<p><strong>请求</strong>：无 Query、无 Body。</p>
+<p><strong>成功 <code>data</code></strong></p>
+<table><thead><tr><th>字段</th><th>类型</th><th>必有</th><th>说明</th></tr></thead><tbody><tr><td><code>brandName</code></td><td>string</td><td>是</td><td>固定 <code>&quot;GOOCI 谷器&quot;</code></td></tr><tr><td><code>servicePhone</code></td><td>string</td><td>是</td><td>来自 <code>TS_SYS_PARAMETER.PARAM_CODE=SERVICE_PHONE</code> 的 <code>PARAM_VALUE</code>。库中无记录或值为 null 时返回 <code>&quot;&quot;</code>。前端空串显示「预留」</td></tr></tbody></table>
+<p><strong>示例</strong></p>
+<pre><code>GET /api/site/meta</code></pre>
+<pre><code>{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;ok&quot;,
+  &quot;data&quot;: {
+    &quot;brandName&quot;: &quot;GOOCI 谷器&quot;,
+    &quot;servicePhone&quot;: &quot;&quot;
+  }
+}</code></pre>
+<h2>6. POST <code>/api/auth/login</code></h2>
+<p><strong>请求体 <code>LoginCommand</code></strong></p>
+<table><thead><tr><th>字段</th><th>类型</th><th>校验</th><th>说明</th></tr></thead><tbody><tr><td><code>loginName</code></td><td>string</td><td>非空，否则 <code>&quot;账号不能为空&quot;</code></td><td>登录名</td></tr><tr><td><code>loginPassword</code></td><td>string</td><td>非空，否则 <code>&quot;密码不能为空&quot;</code></td><td>明文密码，服务端用 BCrypt 比对</td></tr></tbody></table>
+<p><strong>成功 <code>data</code>：<code>SessionView</code></strong></p>
+<table><thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><td><code>token</code></td><td>string</td><td>JWT，后续放 Header。仅登录接口返回</td></tr><tr><td><code>userId</code></td><td>string</td><td>用户 ID（UUID）</td></tr><tr><td><code>displayName</code></td><td>string</td><td>显示名</td></tr><tr><td><code>mobile</code></td><td>string</td><td>脱敏：长度 ≥ 7 时 <code>前3 + **** + 后4</code>；否则原样；可为 null</td></tr><tr><td><code>roleName</code></td><td>string</td><td>角色名，演示数据为 <code>&quot;企业管理员&quot;</code></td></tr><tr><td><code>enterId</code></td><td>string</td><td>企业 ID，对应用户 <code>TS_ENTER_ID</code></td></tr><tr><td><code>enterName</code></td><td>string</td><td>企业名；用户无企业时可能缺省</td></tr><tr><td><code>regionText</code></td><td>string</td><td>地区文案</td></tr><tr><td><code>certStatus</code></td><td>string</td><td><code>&quot;1&quot;</code> 已认证，其它视为未认证。无企业时可能缺省</td></tr><tr><td><code>servicePhone</code></td><td>string</td><td>同站点客服电话，可能 <code>&quot;&quot;</code></td></tr><tr><td><code>menus</code></td><td><code>MenuView[]</code></td><td>菜单树，见第 8 节</td></tr></tbody></table>
+<p><code>MenuView</code>：</p>
+<table><thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><td><code>id</code></td><td>string</td><td>菜单 ID</td></tr><tr><td><code>menuCode</code></td><td>string</td><td>编码，前端根图标用</td></tr><tr><td><code>menuName</code></td><td>string</td><td>显示名</td></tr><tr><td><code>routePath</code></td><td>string</td><td>前端路由，如 <code>/workbench/home</code></td></tr><tr><td><code>iconCode</code></td><td>string</td><td>仅根节点有。取值：<code>monitor</code> / <code>office</code> / <code>collection</code> / <code>lock</code> / <code>grid</code>。子节点为 null</td></tr><tr><td><code>children</code></td><td><code>MenuView[]</code></td><td>子菜单，缺省空数组</td></tr></tbody></table>
+<p><strong>失败（HTTP 200, <code>code=1</code>）</strong></p>
+<table><thead><tr><th>message</th><th>条件</th></tr></thead><tbody><tr><td><code>账号不能为空</code></td><td>缺字段或空串（校验）</td></tr><tr><td><code>密码不能为空</code></td><td>缺字段或空串（校验）</td></tr><tr><td><code>账号或密码错误</code></td><td>用户不存在或 BCrypt 不匹配</td></tr></tbody></table>
+<p><strong>示例</strong></p>
+<pre><code>POST /api/auth/login
+Content-Type: application/json
+
+{&quot;loginName&quot;:&quot;admin&quot;,&quot;loginPassword&quot;:&quot;GooCi@2026&quot;}</code></pre>
+<pre><code>{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;ok&quot;,
+  &quot;data&quot;: {
+    &quot;token&quot;: &quot;&lt;jwt&gt;&quot;,
+    &quot;userId&quot;: &quot;&lt;uuid&gt;&quot;,
+    &quot;displayName&quot;: &quot;管理员&quot;,
+    &quot;mobile&quot;: &quot;138****0000&quot;,
+    &quot;roleName&quot;: &quot;企业管理员&quot;,
+    &quot;enterId&quot;: &quot;&lt;uuid&gt;&quot;,
+    &quot;enterName&quot;: &quot;谷器演示工厂&quot;,
+    &quot;regionText&quot;: &quot;待完善地区信息&quot;,
+    &quot;certStatus&quot;: &quot;1&quot;,
+    &quot;servicePhone&quot;: &quot;&quot;,
+    &quot;menus&quot;: []
+  }
+}</code></pre>
+<p><code>menus</code> 完整结构见第 8 节，登录与 session 接口同一棵树。</p>
+<h2>6.1 POST <code>/api/auth/sms</code></h2>
+<p>演示环境不接短信通道。成功时 <code>data.demoCode</code> 为 6 位数字，前端提示用。5 分钟有效，校验通过后在注册成功时作废。</p>
+<p><strong>请求体 <code>SmsCodeCommand</code></strong>：<code>mobile</code> 非空，需匹配 <code>1</code> + 10 位数字，否则 <code>请填写正确的手机号</code>。</p>
+<h2>6.2 POST <code>/api/auth/register</code></h2>
+<p>成功 <code>data</code> 同登录 <code>SessionView</code>（含 token）。<code>registerKind</code>：<code>ENTERPRISE</code> / <code>PERSON</code>。</p>
+<p><strong>请求体 <code>RegisterCommand</code></strong></p>
+<table><thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><td><code>registerKind</code></td><td>string</td><td><code>ENTERPRISE</code> 或 <code>PERSON</code></td></tr><tr><td><code>mobile</code></td><td>string</td><td>登录名=手机号</td></tr><tr><td><code>smsCode</code></td><td>string</td><td>须匹配未过期验证码</td></tr><tr><td><code>displayName</code></td><td>string</td><td>姓名</td></tr><tr><td><code>loginPassword</code></td><td>string</td><td>至少 6 位</td></tr><tr><td><code>confirmPassword</code></td><td>string</td><td>须与密码一致</td></tr><tr><td><code>enterName</code></td><td>string</td><td>企业注册必填，公司名称</td></tr><tr><td><code>jobName</code></td><td>string</td><td>个人注册必填，职能</td></tr><tr><td><code>inviteCode</code></td><td>string</td><td>可空。个人填写时须等于某企业 <code>ENTER_CODE</code>（演示工厂为 <code>DEMO</code>）</td></tr><tr><td><code>agreed</code></td><td>boolean</td><td>须为 true</td></tr></tbody></table>
+<p>企业注册：新建企业（<code>certStatus=0</code>）+ 默认部门 + 企业管理员。个人带有效邀请码：加入该企业为员工。个人无邀请码：以姓名新建企业并成为管理员。</p>
+<p>失败文案：<code>请阅读并同意平台协议</code>、<code>请填写正确的手机号</code>、<code>验证码错误或已过期</code>、<code>密码至少6位</code>、<code>两次输入的密码不一致</code>、<code>该手机号已注册</code>、<code>公司名称不能为空</code>、<code>请选择职能</code>、<code>邀请码无效</code>、<code>注册类型不正确</code>。</p>
+<h2>7. GET <code>/api/console/session</code></h2>
+<p>取当前登录用户。Header 必须带 Bearer。</p>
+<p><strong>与登录的差别</strong></p>
+<ul>
+<li>不返回 <code>token</code>（JSON 里为 <code>null</code> 或不使用该值）</li>
+<li>其余字段与登录成功体相同（含 <code>menus</code>、脱敏手机号、客服电话）</li>
+</ul>
+<p><strong>失败</strong></p>
+<table><thead><tr><th>HTTP</th><th>code</th><th>message</th><th>条件</th></tr></thead><tbody><tr><td>401</td><td>1</td><td><code>未登录或登录已过期</code></td><td>无 Header、token 非法或过期（过滤器拦截，进不了 Controller）</td></tr><tr><td>200</td><td>1</td><td><code>未登录</code></td><td>理论上 Holder 为空（正常会被 401 拦住）</td></tr><tr><td>200</td><td>1</td><td><code>用户不存在</code></td><td>token 里的 userId 在库中已删</td></tr></tbody></table>
+<h2>8. GET <code>/api/console/overview</code></h2>
+<p>工作台首页数字。未读条数、待办条数按当前登录人统计。设备数量仍为 <code>0</code>。<strong>不做授权码。不做小程序自动传站内信。</strong></p>
+<p><strong>成功 <code>data</code>：<code>ConsoleOverview</code></strong></p>
+<table><thead><tr><th>字段</th><th>类型</th><th>当前值</th><th>前端位置</th></tr></thead><tbody><tr><td><code>unreadMessageCount</code></td><td>number</td><td>当前用户未读站内信条数</td><td>工作台右侧「未读信息」</td></tr><tr><td><code>pendingTaskCount</code></td><td>number</td><td>当前用户未处理待办条数</td><td>工作台右侧「待办任务」</td></tr><tr><td><code>linkedDeviceCount</code></td><td>number</td><td>0</td><td>右侧「已接入设备数量」</td></tr><tr><td><code>onlineDeviceCount</code></td><td>number</td><td>0</td><td>右侧「在线设备数量」</td></tr><tr><td><code>recentMessages</code></td><td>array</td><td>最多 8 条未读站内信 <code>{id, content}</code></td><td>右侧「消息动态」滚动</td></tr></tbody></table>
+<p>无 Query。鉴权失败同 session，HTTP 401。</p>
+<h2>9. 个人信息</h2>
+<p>工作台「个人信息」页。本页手机号返回库内明文，<strong>不做脱敏</strong>（与登录 / session 不同）。邮箱未填时 <code>mailAddr</code> 为空串，前端显示「请添加邮箱」。角色、部门、公司、已开通应用只读。角色后「管理」跳 <code>/workbench/org/structure</code>；部门后「管理」跳 <code>/workbench/org/dept</code>。</p>
+<p>已开通应用不是控制台菜单模块，只是授权行。演示环境写 2 条，不预装产品目录里的 20 个模块。</p>
+<h3>9.1 GET <code>/api/console/profile</code></h3>
+<p><strong>请求</strong>：无 Query、无 Body。Header 必须带 Bearer。</p>
+<p><strong>成功 <code>data</code>：<code>ProfileView</code></strong></p>
+<table><thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><td><code>displayName</code></td><td>string</td><td>姓名</td></tr><tr><td><code>mobile</code></td><td>string</td><td>手机号，明文，可为 null</td></tr><tr><td><code>mailAddr</code></td><td>string</td><td>邮箱；未填为 <code>&quot;&quot;</code></td></tr><tr><td><code>roleName</code></td><td>string</td><td>角色名，演示为 <code>企业管理员</code></td></tr><tr><td><code>enterName</code></td><td>string</td><td>公司名称；无企业时可能缺省</td></tr><tr><td><code>deptNames</code></td><td><code>string[]</code></td><td>所属部门名，按绑定顺序。演示：仓库、采购、销售、生产车间</td></tr><tr><td><code>grants</code></td><td><code>AppGrantView[]</code></td><td>已开通应用。无授权时为空数组</td></tr></tbody></table>
+<p><code>AppGrantView</code>：</p>
+<table><thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><td><code>appCode</code></td><td>string</td><td>应用编码</td></tr><tr><td><code>appName</code></td><td>string</td><td>已开通 APP 名</td></tr><tr><td><code>funcRoleName</code></td><td>string</td><td>功能角色</td></tr><tr><td><code>dataRoleName</code></td><td>string</td><td>数据角色，演示为企业名</td></tr></tbody></table>
+<p><strong>示例</strong></p>
+<pre><code>GET /api/console/profile
+Authorization: Bearer &lt;token&gt;</code></pre>
+<pre><code>{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;ok&quot;,
+  &quot;data&quot;: {
+    &quot;displayName&quot;: &quot;管理员&quot;,
+    &quot;mobile&quot;: &quot;13800000000&quot;,
+    &quot;mailAddr&quot;: &quot;&quot;,
+    &quot;roleName&quot;: &quot;企业管理员&quot;,
+    &quot;enterName&quot;: &quot;谷器演示工厂&quot;,
+    &quot;deptNames&quot;: [&quot;仓库&quot;, &quot;采购&quot;, &quot;销售&quot;, &quot;生产车间&quot;],
+    &quot;grants&quot;: [
+      {
+        &quot;appCode&quot;: &quot;EXT_PDM&quot;,
+        &quot;appName&quot;: &quot;设备故障预测&quot;,
+        &quot;funcRoleName&quot;: &quot;超级管理员&quot;,
+        &quot;dataRoleName&quot;: &quot;谷器演示工厂&quot;
+      },
+      {
+        &quot;appCode&quot;: &quot;EXT_PACK_AI&quot;,
+        &quot;appName&quot;: &quot;礼盒包装AI&quot;,
+        &quot;funcRoleName&quot;: &quot;超级管理员&quot;,
+        &quot;dataRoleName&quot;: &quot;谷器演示工厂&quot;
+      }
+    ]
+  }
+}</code></pre>
+<p>失败同 session：HTTP 401 或 <code>用户不存在</code>。</p>
+<h3>9.2 POST <code>/api/console/profile/name</code></h3>
+<p><strong>请求体 <code>UpdateNameCommand</code></strong></p>
+<table><thead><tr><th>字段</th><th>类型</th><th>校验</th><th>说明</th></tr></thead><tbody><tr><td><code>displayName</code></td><td>string</td><td>非空，否则 <code>姓名不能为空</code></td><td>去空格后最长 100，否则 <code>姓名过长</code></td></tr></tbody></table>
+<p>成功 <code>data</code> 为更新后的 <code>ProfileView</code>。</p>
+<h3>9.3 POST <code>/api/console/profile/mail</code></h3>
+<p><strong>请求体 <code>UpdateMailCommand</code></strong></p>
+<table><thead><tr><th>字段</th><th>类型</th><th>校验</th><th>说明</th></tr></thead><tbody><tr><td><code>mailAddr</code></td><td>string</td><td>可空</td><td>空串或空白则清空。非空须匹配 <code>本地@域名.后缀</code>，否则 <code>邮箱格式不正确</code></td></tr></tbody></table>
+<p>成功 <code>data</code> 为更新后的 <code>ProfileView</code>。</p>
+<h3>9.4 POST <code>/api/console/profile/password</code></h3>
+<p><strong>请求体 <code>UpdatePasswordCommand</code></strong></p>
+<table><thead><tr><th>字段</th><th>类型</th><th>校验</th><th>说明</th></tr></thead><tbody><tr><td><code>oldPassword</code></td><td>string</td><td>非空，否则 <code>原密码不能为空</code></td><td>当前密码，BCrypt 比对</td></tr><tr><td><code>newPassword</code></td><td>string</td><td>非空，否则 <code>新密码不能为空</code></td><td>去空格后至少 6 位</td></tr></tbody></table>
+<p><strong>失败（HTTP 200, <code>code=1</code>）</strong></p>
+<table><thead><tr><th>message</th><th>条件</th></tr></thead><tbody><tr><td><code>原密码错误</code></td><td>旧密码不匹配</td></tr><tr><td><code>新密码至少6位</code></td><td>新密码过短</td></tr><tr><td><code>新密码不能与原密码相同</code></td><td>新旧相同</td></tr></tbody></table>
+<p>成功 <code>data</code> 为 <code>null</code>。不换发 token，原 JWT 仍有效。前端两次确认新密码，不一致不发请求。</p>
+<h2>10. 组织管理</h2>
+<p>当前企业以登录用户 <code>TS_ENTER_ID</code> 为准。没有多租户域名。公开注册见 6.2。下属企业挂到当前组织树仍不提供接口，需厂商侧关联。</p>
+<p>空字段返回 <code>&quot;&quot;</code>。前端「待补充」是展示层，不是接口值。</p>
+<h3>10.1 GET <code>/api/console/org/enterprise</code></h3>
+<p><strong>成功 <code>data</code>：<code>EnterProfileView</code></strong></p>
+<table><thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><td><code>enterId</code></td><td>string</td><td>企业 ID</td></tr><tr><td><code>enterName</code></td><td>string</td><td>企业名称</td></tr><tr><td><code>certStatus</code></td><td>string</td><td><code>1</code> 已认证</td></tr><tr><td><code>enterNature</code></td><td>string</td><td>企业性质</td></tr><tr><td><code>foundDate</code></td><td>string</td><td>成立时间</td></tr><tr><td><code>enterScale</code></td><td>string</td><td>公司规模</td></tr><tr><td><code>industryName</code></td><td>string</td><td>所属行业</td></tr><tr><td><code>contactName</code></td><td>string</td><td>联系人</td></tr><tr><td><code>contactMobile</code></td><td>string</td><td>手机</td></tr><tr><td><code>contactPhone</code></td><td>string</td><td>联系电话</td></tr><tr><td><code>contactMail</code></td><td>string</td><td>email</td></tr><tr><td><code>enterIntro</code></td><td>string</td><td>企业简介</td></tr><tr><td><code>provinceName</code></td><td>string</td><td>省</td></tr><tr><td><code>cityName</code></td><td>string</td><td>市</td></tr><tr><td><code>districtName</code></td><td>string</td><td>区</td></tr><tr><td><code>addressText</code></td><td>string</td><td>详细地址</td></tr></tbody></table>
+<h3>10.2 POST <code>/api/console/org/enterprise</code></h3>
+<p><strong>请求体 <code>UpdateEnterCommand</code></strong>：上表除 <code>enterId</code>、<code>certStatus</code> 外均可写。写入省市区时同步拼接 <code>regionText</code>。<code>enterName</code> 去空后不能为空，否则 <code>企业名称不能为空</code>。成功 <code>data</code> 为更新后的 <code>EnterProfileView</code>。</p>
+<h3>10.3 GET <code>/api/console/org/structure</code></h3>
+<p><strong>成功 <code>data</code>：<code>OrgStructureView</code></strong></p>
+<table><thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><td><code>enter</code></td><td>EnterProfileView</td><td>当前企业</td></tr><tr><td><code>admins</code></td><td><code>StaffRowView[]</code></td><td>角色为「企业管理员」的用户</td></tr></tbody></table>
+<p><code>StaffRowView</code>：<code>userId</code>、<code>mobile</code>（明文）、<code>displayName</code>、<code>mailAddr</code>、<code>deptName</code>（人员列表才有，管理员行可为空串）。</p>
+<h3>10.4 GET <code>/api/console/org/staff</code></h3>
+<p>可选管理员候选人：当前企业、角色不是「企业管理员」。</p>
+<p>Query：<code>deptId</code> 可选；<code>keyword</code> 匹配姓名或手机；<code>pageNo</code> 默认 1；<code>pageSize</code> 默认 5。成功 <code>data</code> 为 <code>SliceView&lt;StaffRowView&gt;</code>。</p>
+<h3>10.5 POST <code>/api/console/org/admins</code></h3>
+<p><strong>请求体 <code>PromoteAdminCommand</code></strong>：<code>userId</code> 非空。目标须属本企业且当前不是管理员，否则 <code>人员不存在</code> / <code>已是企业管理员</code>。成功 <code>data</code> 为 <code>null</code>。</p>
+<h3>10.6 POST <code>/api/console/org/admins/remove</code></h3>
+<p><strong>请求体 <code>RemoveStaffCommand</code></strong>：<code>userId</code> 非空。不能移除当前登录账号；至少保留一名企业管理员。目标降为角色「员工」。成功 <code>data</code> 为 <code>null</code>。</p>
+<h3>10.7 GET <code>/api/console/org/cert</code></h3>
+<p><strong>成功 <code>data</code>：<code>CertView</code></strong></p>
+<table><thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><td><code>registerTime</code></td><td>string</td><td><code>yyyy-MM-dd HH:mm:ss</code>，无则为空串</td></tr><tr><td><code>bizPassed</code></td><td>string</td><td><code>1</code> 工商已通过</td></tr><tr><td><code>bankPassed</code></td><td>string</td><td><code>1</code> 银行已通过</td></tr><tr><td><code>certEnterName</code></td><td>string</td><td>认证企业名称，空则回落企业名</td></tr></tbody></table>
+<p>提交变更<strong>不会</strong>把 <code>bizPassed</code> / <code>bankPassed</code> 置为已通过，只落申请字段，由厂商审核。</p>
+<h3>10.7.1 GET <code>/api/console/org/cert/biz</code></h3>
+<p><strong>成功 <code>data</code>：<code>BizChangeView</code></strong></p>
+<table><thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><td><code>enterName</code></td><td>string</td><td>企业名称</td></tr><tr><td><code>creditCode</code></td><td>string</td><td>统一社会信用代码</td></tr><tr><td><code>licenseType</code></td><td>string</td><td>企业证件类型</td></tr><tr><td><code>licenseScan</code></td><td>string</td><td>证件扫描件 fileId</td></tr><tr><td><code>legalPerson</code></td><td>string</td><td>法人代表，可空</td></tr><tr><td><code>legalIdFront</code></td><td>string</td><td>法人身份证正面 fileId，可空</td></tr><tr><td><code>legalIdBack</code></td><td>string</td><td>法人身份证反面 fileId，可空</td></tr><tr><td><code>changeProof</code></td><td>string</td><td>变更凭证 fileId</td></tr><tr><td><code>bizRemark</code></td><td>string</td><td>备注，最多 200 字</td></tr></tbody></table>
+<h3>10.7.2 POST <code>/api/console/org/cert/biz</code></h3>
+<p><strong>请求体 <code>SaveBizChangeCommand</code></strong>：<code>enterName</code>、<code>creditCode</code>、<code>licenseType</code>、<code>licenseScan</code>、<code>changeProof</code> 非空。成功 <code>data</code> 为更新后的 <code>BizChangeView</code>。<code>bizCertStatus</code> 置为未通过，等待厂商审核。</p>
+<h3>10.7.3 GET <code>/api/console/org/cert/bank</code></h3>
+<p><strong>成功 <code>data</code>：<code>BankChangeView</code></strong></p>
+<table><thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><td><code>bankName</code></td><td>string</td><td>银行</td></tr><tr><td><code>bankProvince</code></td><td>string</td><td>省份</td></tr><tr><td><code>bankCity</code></td><td>string</td><td>城市</td></tr><tr><td><code>bankBranch</code></td><td>string</td><td>开户支行</td></tr><tr><td><code>bankAccount</code></td><td>string</td><td>对公账户</td></tr><tr><td><code>bankPhone</code></td><td>string</td><td>联系电话</td></tr><tr><td><code>bankRemark</code></td><td>string</td><td>备注</td></tr><tr><td><code>servicePhone</code></td><td>string</td><td>客服电话，空则前端显示「预留」</td></tr></tbody></table>
+<h3>10.7.4 POST <code>/api/console/org/cert/bank</code></h3>
+<p><strong>请求体 <code>SaveBankChangeCommand</code></strong>：银行、省、市、支行、对公账户、联系电话非空。成功后 <code>bankCertStatus</code> 置为未通过，等待厂商审核。</p>
+<h3>10.7.5 认证附件</h3>
+<ul>
+<li><code>POST /api/console/org/cert/file</code>：<code>multipart/form-data</code> 字段 <code>file</code>。jpg / jpeg / gif / png / pdf，不超过 4M。成功 <code>data</code>：<code>fileId</code>、<code>fileName</code>。</li>
+<li><code>GET /api/console/org/cert/file/{fileId}</code>：返回文件流，仅当前企业目录。</li>
+</ul>
+<h3>10.8 GET <code>/api/console/org/depts</code></h3>
+<p>Query：<code>deptId</code> 可选；<code>devicePage</code>、<code>memberPage</code> 默认 1；<code>pageSize</code> 默认 5。无部门树时 <code>current</code> / 分页体可空。</p>
+<p><strong>成功 <code>data</code>：<code>DeptBoardView</code></strong></p>
+<table><thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><td><code>tree</code></td><td><code>DeptNodeView[]</code></td><td>部门列表（按 sortNo）</td></tr><tr><td><code>current</code></td><td>DeptNodeView</td><td>当前部门</td></tr><tr><td><code>parentName</code></td><td>string</td><td>上级部门名，无则为空串</td></tr><tr><td><code>devices</code></td><td><code>SliceView&lt;DeviceRowView&gt;</code></td><td>设备分页</td></tr><tr><td><code>members</code></td><td><code>SliceView&lt;StaffRowView&gt;</code></td><td>成员分页</td></tr></tbody></table>
+<p><code>DeptNodeView</code>：<code>id</code>、<code>parentId</code>、<code>deptName</code>、<code>deptDesc</code>、<code>enableFlag</code>（<code>1</code> 启用 / <code>0</code> 禁用）。</p>
+<p><code>DeviceRowView</code>：<code>id</code>、<code>deviceSn</code>、<code>deviceAlias</code>、<code>boxCode</code>、<code>brandName</code>、<code>modelName</code>、<code>appOpenCount</code>。</p>
+<p><code>SliceView</code>：<code>total</code>、<code>pageNo</code>、<code>pageSize</code>、<code>records</code>。内存分页，不是 MyBatis 分页插件。</p>
+<h3>10.9 POST <code>/api/console/org/depts</code></h3>
+<p><strong>请求体 <code>SaveDeptCommand</code></strong>：<code>id</code> 空则新增；<code>deptName</code> 非空；<code>parentId</code>、<code>deptDesc</code> 可空。成功返回当前部门的 <code>DeptBoardView</code>。</p>
+<h3>10.10 POST <code>/api/console/org/depts/disable</code></h3>
+<p><strong>请求体 <code>DeptIdCommand</code></strong>：<code>deptId</code> 非空。置 <code>enableFlag=0</code>，不删数据。成功返回 <code>DeptBoardView</code>。</p>
+<h3>10.10.1 POST <code>/api/console/org/depts/enable</code></h3>
+<p><strong>请求体 <code>DeptIdCommand</code></strong>：<code>deptId</code> 非空。置 <code>enableFlag=1</code>。成功返回 <code>DeptBoardView</code>。选中已禁用部门时，结构树按钮从「禁用」换成「启用」。</p>
+<h3>10.11 POST <code>/api/console/org/devices</code></h3>
+<p><strong>请求体 <code>SaveDeviceCommand</code></strong>：<code>deptId</code>、<code>deviceSn</code> 非空。序列号已存在则改挂到该部门。成功返回 <code>DeptBoardView</code>。弹窗「分配设备」走设备池，不走本接口。</p>
+<h3>10.11.1 GET <code>/api/console/org/devices/pool</code></h3>
+<p>Query：<code>deptId</code> 必填。成功 <code>data</code> 为 <code>DevicePoolView</code>：<code>pending</code>（未挂本部门）、<code>assigned</code>（已挂本部门），元素为 <code>DeviceRowView</code>。</p>
+<h3>10.11.2 POST <code>/api/console/org/devices/assign</code></h3>
+<p><strong>请求体 <code>AssignDeviceCommand</code></strong>：<code>deptId</code> 非空；<code>deviceIds</code> 为确认后的已分配主键。在列表中的改挂到本部门，原先在本部门但不在列表中的清空部门绑定。成功返回 <code>DeptBoardView</code>。</p>
+<h3>10.12 POST <code>/api/console/org/devices/remove</code></h3>
+<p><strong>请求体 <code>RemoveDeviceCommand</code></strong>：<code>id</code> 非空。只清空设备的部门绑定，不删设备行。成功返回 <code>DeptBoardView</code>。</p>
+<h3>10.13 POST <code>/api/console/org/members</code></h3>
+<p><strong>请求体 <code>AddStaffCommand</code></strong>：<code>deptId</code>、<code>mobile</code>、<code>smsCode</code>、<code>displayName</code> 必填；<code>mailAddr</code> 可空。先校验短信（<code>POST /api/auth/sms</code>），再创建或复用本企业用户，角色「员工」，初始密码 <code>GooCi@2026</code>。已在部门中则 <code>该成员已在部门中</code>。成功返回 <code>DeptBoardView</code>。</p>
+<h3>10.13.1 POST <code>/api/console/org/members/assign</code></h3>
+<p><strong>请求体 <code>AssignMemberCommand</code></strong>：<code>deptId</code> 非空；<code>userIds</code> 已有人员主键。已在部门中的跳过。成功返回 <code>DeptBoardView</code>。</p>
+<h3>10.14 POST <code>/api/console/org/members/remove</code></h3>
+<p><strong>请求体 <code>RemoveStaffCommand</code></strong>：<code>userId</code>、<code>deptId</code> 必填。只解绑关系。成功返回 <code>DeptBoardView</code>。</p>
+<h3>10.15 员工管理 <code>/api/console/staff</code></h3>
+<p>本企业全部账号（含管理员）。人员编号按规则自动生成，不在表单里手填。导入列与根目录 <code>员工倒入模版.xlsx</code> 对齐：手机号码、人员名称、密码、部门、备注、电子邮箱、微信、钉钉、员工卡号，以及 extend1–extend20 / 已配置的自定义字段名。</p>
+<h4>GET <code>/api/console/staff</code></h4>
+<p>Query：<code>keyword</code> 可选（编号/姓名/手机）；<code>pageNo</code> 默认 1；<code>pageSize</code> 默认 10。</p>
+<p>成功 <code>data</code> 为 <code>StaffBoardView</code>：</p>
+<table><thead><tr><th>字段</th><th>说明</th></tr></thead><tbody><tr><td><code>slice</code></td><td>分页：<code>StaffItemView</code> 列表</td></tr><tr><td><code>columns</code></td><td>列配置。<code>colKey</code> / <code>colName</code> / <code>visibleFlag</code>（<code>1</code> 显示）</td></tr><tr><td><code>fields</code></td><td>自定义字段</td></tr><tr><td><code>depts</code></td><td>启用中的部门，供表单多选</td></tr><tr><td><code>codeRule</code></td><td>编号规则：<code>codeName</code>、<code>previewText</code>、<code>parts[]</code>（<code>valueType</code>=<code>FIXED</code>/<code>DATE</code>/<code>SEQ</code>，<code>partValue</code>）</td></tr></tbody></table>
+<p><code>StaffItemView</code>：<code>userId</code>、<code>staffCode</code>、<code>displayName</code>、<code>mobile</code>、<code>deptName</code>（逗号拼接）、<code>deptIds</code>、<code>mailAddr</code>、<code>remarkText</code>、<code>wechatNo</code>、<code>dingNo</code>、<code>cardNo</code>、<code>crtTime</code>、<code>extras[]</code>（<code>fieldId</code>/<code>fieldName</code>/<code>fieldValue</code>）。</p>
+<p>默认可见列：人员编号、人员名称、手机号码、所属部门、电子邮箱、备注。微信号、钉钉号、创建时间默认隐藏。</p>
+<h4>POST <code>/api/console/staff</code></h4>
+<p><code>SaveStaffCommand</code>：<code>mobile</code>、<code>displayName</code> 必填；新增时 <code>loginPassword</code> 必填，编辑留空则不改密码；<code>deptIds</code> 多部门；<code>mailAddr</code>/<code>remarkText</code>/<code>wechatNo</code>/<code>dingNo</code>/<code>cardNo</code> 可空；<code>extras</code> 按字段写入。手机须 <code>1</code> 开头 11 位。新增时按编号规则取号。成功返回最新 <code>StaffBoardView</code>。</p>
+<h4>POST <code>/api/console/staff/remove</code></h4>
+<p><code>StaffIdCommand.userId</code>。不能删当前登录账号；不能删掉最后一名企业管理员。成功返回 <code>StaffBoardView</code>。</p>
+<h4>POST <code>/api/console/staff/code-rule</code></h4>
+<p><code>codeName</code> 必填；<code>parts</code> 1–10 段。<code>DATE</code> 仅 <code>YYMMDD</code>/<code>YYYYMMDD</code>/<code>YYMM</code>/<code>YYYYMM</code>/<code>MMDD</code>；<code>SEQ</code> 为数字样本（位数即补零宽度）。返回 <code>StaffCodeRuleView</code>。</p>
+<h4>POST <code>/api/console/staff/columns</code></h4>
+<p><code>keys</code> 为可见 <code>colKey</code> 列表（含自定义字段 id）。空列表则回退默认可见列。返回 <code>StaffBoardView</code>。</p>
+<h4>POST <code>/api/console/staff/fields</code></h4>
+<p><code>fieldName</code> 必填；<code>fieldType</code>=<code>TEXT</code>/<code>NUMBER</code>/<code>DATE</code>，默认 TEXT；<code>requiredFlag</code> <code>1</code> 必填；<code>hintText</code> 引导文字。最多 20 个。返回 <code>StaffBoardView</code>。</p>
+<h4>POST <code>/api/console/staff/fields/remove</code></h4>
+<p><code>fieldId</code>。同时删该字段取值。返回 <code>StaffBoardView</code>。</p>
+<h4>GET <code>/api/console/staff/template</code></h4>
+<p>下载 <code>员工导入模版.xlsx</code>（二进制，非信封）。无自定义字段时带 extend1–extend20；有则用字段名称替换扩展列。</p>
+<h4>POST <code>/api/console/staff/import-headers</code></h4>
+<p><code>multipart/form-data</code>：<code>file</code> xlsx。成功 <code>StaffHeadView.headers</code> 为去空后的第一行表头。</p>
+<h4>POST <code>/api/console/staff/import</code></h4>
+<p><code>multipart/form-data</code>：<code>file</code> xlsx；<code>importMode</code>=<code>CREATE</code>（仅新增，已存在手机号跳过）或 <code>UPSERT</code>（新增与更新）；<code>mappingJson</code> 为系统字段到表头的映射，例如 <code>{&quot;mobile&quot;:&quot;手机号码&quot;,&quot;displayName&quot;:&quot;人员名称&quot;}</code>。部门按名称匹配，支持 <code>，</code>、<code>,</code> 分隔多部门。空密码：新增用 <code>GooCi@2026</code>，更新不改密码。</p>
+<p>成功 <code>StaffImportView</code>：<code>createdCount</code>、<code>updatedCount</code>、<code>skippedCount</code>、<code>failedCount</code>、<code>messages</code>（如 <code>第3行：手机号不正确</code>）。</p>
+<h3>10.16 设备管理 <code>/api/console/devices</code></h3>
+<p>本企业设备台账。设备编号按 <code>EQP</code> + 当天 <code>yyyyMMdd</code> + 4 位流水自动生成，表单只读。导入列与根目录 <code>设备倒入模版.xlsx</code> 对齐：设备编号、设备序列号、设备别名、设备类型、系统制造商、系统品牌、型号、安装位置、购置日期、使用部门、设备状态、设备等级、包机人手机号、备注，以及 extend1–extend20 / 已配置的自定义字段名。</p>
+<p>「同步」不对接采集盒实时通道：有 <code>BOX_CODE</code> 标为已联网，否则未联网。部门设备分配仍走 <code>/api/console/org/devices/*</code>。</p>
+<h4>GET <code>/api/console/devices</code></h4>
+<p>Query：<code>keyword</code> 可选（编号/序列号/别名）；列筛选 <code>deviceCode</code>/<code>deviceSn</code>/<code>deviceAlias</code>/<code>deviceType</code>/<code>makerName</code>/<code>brandName</code>/<code>modelName</code>/<code>installPlace</code>/<code>deviceStatus</code>/<code>ownerName</code>；多选逗号 <code>deptIds</code>/<code>onlineFlag</code>/<code>deviceLevel</code>；<code>sortKey</code>、<code>sortDir</code>=<code>asc</code>/<code>desc</code>；<code>pageNo</code> 默认 1；<code>pageSize</code> 默认 10。</p>
+<p>成功 <code>data</code> 为 <code>DeviceBoardView</code>：</p>
+<table><thead><tr><th>字段</th><th>说明</th></tr></thead><tbody><tr><td><code>slice</code></td><td>分页：<code>DeviceItemView</code> 列表</td></tr><tr><td><code>columns</code></td><td>列配置。<code>colKey</code> / <code>colName</code> / <code>visibleFlag</code>（<code>1</code> 显示）</td></tr><tr><td><code>fields</code></td><td>自定义字段</td></tr><tr><td><code>depts</code></td><td>启用中的部门</td></tr><tr><td><code>owners</code></td><td>包机人：<code>userId</code> / <code>displayName</code> / <code>mobile</code></td></tr><tr><td><code>deviceTypes</code></td><td>已出现的设备类型，供新增下拉</td></tr><tr><td><code>nextCode</code></td><td>下一号预览</td></tr></tbody></table>
+<p><code>DeviceItemView</code>：<code>id</code>、<code>deviceCode</code>、<code>deviceSn</code>、<code>deviceAlias</code>、<code>deviceType</code>、<code>makerName</code>、<code>brandName</code>、<code>modelName</code>、<code>installPlace</code>、<code>buyDate</code>、<code>deptId</code>、<code>deptName</code>、<code>onlineFlag</code>/<code>onlineText</code>、<code>deviceStatus</code>、<code>deviceLevel</code>、<code>ownerUserId</code>/<code>ownerName</code>/<code>ownerMobile</code>、<code>remarkText</code>、<code>crtTime</code>、<code>extras[]</code>。</p>
+<p>默认可见列：设备编号、设备序列号、设备别名、设备类型、系统制造商、系统品牌、型号、安装位置、使用部门、是否联网、设备等级。购置日期、设备状态、包机人、备注、创建时间默认隐藏。</p>
+<h4>POST <code>/api/console/devices</code></h4>
+<p><code>SaveDeviceAssetCommand</code>：<code>deviceAlias</code> 必填；<code>id</code> 空则新增。新增时编号由规则生成，忽略入参 <code>deviceCode</code>。序列号空则回落到编号。<code>deptId</code>/<code>ownerUserId</code> 可空（页面「全部」）。<code>extras</code> 按字段写入。成功返回最新 <code>DeviceBoardView</code>。</p>
+<h4>POST <code>/api/console/devices/remove</code></h4>
+<p><code>DeviceAssetIdCommand.id</code>。同时删自定义字段取值。成功返回 <code>DeviceBoardView</code>。</p>
+<h4>POST <code>/api/console/devices/columns</code></h4>
+<p><code>keys</code> 为可见 <code>colKey</code> 列表（含自定义字段 id）。空列表则回退默认可见列。返回 <code>DeviceBoardView</code>。</p>
+<h4>POST <code>/api/console/devices/fields</code></h4>
+<p><code>fieldName</code> 必填；<code>fieldType</code>=<code>TEXT</code>/<code>NUMBER</code>/<code>DATE</code>，默认 TEXT；<code>requiredFlag</code> <code>1</code> 必填；<code>hintText</code> 引导文字。最多 20 个。返回 <code>DeviceBoardView</code>。</p>
+<h4>POST <code>/api/console/devices/fields/remove</code></h4>
+<p><code>fieldId</code>。同时删该字段取值。返回 <code>DeviceBoardView</code>。</p>
+<h4>POST <code>/api/console/devices/sync</code></h4>
+<p>Query 与列表相同。按 <code>BOX_CODE</code> 刷新 <code>ONLINE_FLAG</code> 后返回 <code>DeviceBoardView</code>。</p>
+<h4>GET <code>/api/console/devices/template</code></h4>
+<p>下载 <code>设备导入模版.xlsx</code>（二进制，非信封）。无自定义字段时带 extend1–extend20；有则用字段名称替换扩展列。</p>
+<h4>POST <code>/api/console/devices/import-headers</code></h4>
+<p><code>multipart/form-data</code>：<code>file</code> xlsx。成功 <code>DeviceHeadView.headers</code> 为去空后的第一行表头。</p>
+<h4>POST <code>/api/console/devices/import</code></h4>
+<p><code>multipart/form-data</code>：<code>file</code> xlsx；<code>importMode</code>=<code>CREATE</code>（仅新增，已存在序列号/编号跳过）或 <code>UPSERT</code>（新增与更新）；<code>mappingJson</code> 为系统字段到表头的映射，例如 <code>{\&quot;deviceAlias\&quot;:\&quot;设备别名\&quot;,\&quot;deviceSn\&quot;:\&quot;设备序列号\&quot;}</code>。使用部门按名称匹配；包机人按手机号匹配。空序列号回落到设备编号。</p>
+<p>成功 <code>DeviceImportView</code>：<code>createdCount</code>、<code>updatedCount</code>、<code>skippedCount</code>、<code>failedCount</code>、<code>messages</code>。</p>
+<h3>10.17 APP 权限 <code>/api/console/perm</code></h3>
+<p>已开通 APP 来自企业植入清单 <code>TM_APP_OPEN</code>，必须有入口路径且未隐藏，不是销售目录 20 模块。演示只开通「设备故障预测」「礼盒包装AI」。查询按钮只做筛选，没有另一套搜索产品。未植入的名字（例如别人系统里的设备云眼）不会出现。</p>
+<h4>GET <code>/api/console/perm/roles</code></h4>
+<p>Query：<code>kind</code> 必填 <code>FUNC</code>（功能角色）或 <code>DATA</code>（数据角色）；<code>appCode</code> 可选，空或省略表示全部；<code>pageNo</code> 默认 1；<code>pageSize</code> 默认 5。</p>
+<p>成功 <code>AppRoleBoardView</code>：</p>
+<table><thead><tr><th>字段</th><th>说明</th></tr></thead><tbody><tr><td><code>apps</code></td><td>已开通 APP 下拉：<code>appCode</code>、<code>appName</code></td></tr><tr><td><code>slice</code></td><td>角色行：<code>id</code>、<code>appCode</code>、<code>appName</code>、<code>roleName</code></td></tr></tbody></table>
+<h4>POST <code>/api/console/perm/roles</code></h4>
+<p>JSON：<code>kind</code>、<code>appCode</code>、<code>roleName</code>。<code>appCode</code> 必须是已开通 APP。同 APP 同类型同名拒绝。成功返回刷新后的列表（筛选清空）。</p>
+<h4>GET <code>/api/console/perm/auth</code></h4>
+<p>Query：<code>keyword</code> 可选，匹配手机号或姓名包含；<code>pageNo</code> 默认 1；<code>pageSize</code> 默认 5。</p>
+<p>成功 <code>AppAuthBoardView</code>：</p>
+<table><thead><tr><th>字段</th><th>说明</th></tr></thead><tbody><tr><td><code>apps</code></td><td>已开通 APP 及角色目录：<code>funcRoles</code>、<code>dataRoles</code> 为名称数组</td></tr><tr><td><code>slice</code></td><td><code>userId</code>、<code>mobile</code>、<code>displayName</code>、<code>deptName</code>、<code>mailAddr</code></td></tr></tbody></table>
+<h4>GET <code>/api/console/perm/auth/detail</code></h4>
+<p>Query：<code>userId</code>。成功 <code>AppAuthDetailView</code>：人员字段 + <code>grants</code>（<code>AppGrantView</code>，多角色名用顿号拼接）。</p>
+<h4>POST <code>/api/console/perm/auth</code></h4>
+<p>JSON：<code>userId</code>、<code>kind</code>、<code>items</code>（<code>[{appCode, roleNames:[]}]</code>）。<code>items</code> 是本次勾选的 APP 全集：未出现的 APP 会清掉该类角色；两类角色都空则删除该授权行。角色名必须已在目录中。成功返回账号授权列表第一页。</p>
+<h3>10.18 工业 APP <code>/api/console/biz/apps</code></h3>
+<p>工业 APP 页是本租户<strong>已植入模块</strong>的快捷入口，不是销售目录，也不抄别人系统里的三块产品砖。模块植入时写入 <code>TM_APP_OPEN.ENTRY_PATH</code> 后会自动出现。授权码本版不做。</p>
+<p>演示按生产同一条跳转：砖块进入 <code>/workbench/ext/{appCode}</code>，壳内嵌同域 <code>/ext/{appCode}/</code>，网关转到 <code>TARGET_URL</code>（本机模块机示例 <code>http://127.0.0.1:5174</code>、<code>http://127.0.0.1:8777</code>）。浏览器不直连模块端口，也不写第二条公网 A 记录。旧演示壳 <code>DEMO_SHELL</code> 已隐藏。</p>
+<h4>GET <code>/api/console/biz/apps</code></h4>
+<p>无 Query。成功 <code>BizAppBoardView.apps</code>：</p>
+<table><thead><tr><th>字段</th><th>说明</th></tr></thead><tbody><tr><td><code>appCode</code></td><td>模块编码</td></tr><tr><td><code>appName</code></td><td>显示名</td></tr><tr><td><code>entryPath</code></td><td>工作台路径，点击砖块跳转</td></tr><tr><td><code>hideFlag</code></td><td><code>1</code> 隐藏入口，<code>0</code> 显示。配置入口时仍返回隐藏项</td></tr></tbody></table>
+<p>当前演示入口：<code>EXT_PDM</code>、<code>EXT_PACK_AI</code>。</p>
+<h4>POST <code>/api/console/biz/apps/hide</code></h4>
+<p>JSON：<code>items: [{appCode, hideFlag}]</code>。只改已有入口的模块；未出现在 <code>items</code> 里的入口视为不隐藏。成功返回刷新后的列表。</p>
+<h4>POST <code>/api/console/biz/apps/admin</code></h4>
+<p>JSON：<code>appCode</code>、<code>userId</code>、<code>roleName</code>。人员必须属于本企业；角色必须是该模块已有的功能角色。写入 <code>TR_USER_APP_GRANT</code> 的功能角色（已有则追加，顿号拼接）。成功返回入口列表。</p>
+<h3>10.19 待办任务 <code>/api/console/todo</code></h3>
+<p>业务原理未定，<strong>不做工作流引擎、不造任务</strong>。表 <code>TM_TODO</code> 已建，接口只读当前登录人、未处理（<code>STATUS_FLAG=0</code>）的列表。演示环境为空。</p>
+<h4>GET <code>/api/console/todo</code></h4>
+<p>Query：<code>pageNo</code> 默认 1，<code>pageSize</code> 默认 10。成功 <code>SliceView&lt;TodoItemView&gt;</code>：</p>
+<table><thead><tr><th>字段</th><th>说明</th></tr></thead><tbody><tr><td><code>id</code></td><td>待办 ID</td></tr><tr><td><code>bizLine</code></td><td>业务线</td></tr><tr><td><code>taskType</code></td><td>类型</td></tr><tr><td><code>content</code></td><td>内容</td></tr><tr><td><code>senderName</code></td><td>发送者</td></tr><tr><td><code>handlePath</code></td><td>处理页路径，空则前端提示尚未接入</td></tr><tr><td><code>statusFlag</code></td><td><code>0</code> 未处理</td></tr></tbody></table>
+<p>点击条目看详情、点「处理」跳 <code>handlePath</code>。当前无数据，页面空表。</p>
+<h3>10.20 站内信 <code>/api/console/inbox</code></h3>
+<p>与工作台首页右侧「消息动态」同一张表 <code>TM_INBOX</code>。产品筛选来自本企业已开通 APP，<strong>不抄别人产品名</strong>。来源以后可能是小程序完工播报，<strong>本版不做自动写入</strong>，没有创建接口。</p>
+<h4>GET <code>/api/console/inbox</code></h4>
+<table><thead><tr><th>Query</th><th>默认</th><th>说明</th></tr></thead><tbody><tr><td><code>readFlag</code></td><td><code>0</code></td><td><code>0</code> 未读 / <code>1</code> 已读</td></tr><tr><td><code>rangeCode</code></td><td><code>ALL</code></td><td><code>ALL</code> 全部；<code>TODAY</code> 今天；<code>3D</code> 近三天；<code>7D</code> 近一周；<code>30D</code> 近一个月</td></tr><tr><td><code>appCode</code></td><td>空</td><td>空=全部产品；否则筛该已开通 APP</td></tr><tr><td><code>pageNo</code></td><td>1</td><td></td></tr><tr><td><code>pageSize</code></td><td>10</td><td></td></tr></tbody></table>
+<p>成功 <code>InboxBoardView</code>：<code>apps</code> 为本企业已开通 APP；<code>slice</code> 为当前用户站内信。</p>
+<p><code>InboxItemView</code>：<code>id</code>、<code>content</code>、<code>sendTime</code>（<code>yyyy-MM-dd HH:mm:ss</code>）、<code>readFlag</code>、<code>publisher</code>、<code>appCode</code>、<code>appName</code>。</p>
+<h4>POST <code>/api/console/inbox/read</code></h4>
+<p>JSON：<code>ids</code> 字符串数组。空数组返回 <code>请先选择要操作的消息！</code>。只改当前用户自己的信。成功返回未读第一页（前端会按当前筛选再拉一次）。</p>
+<h4>POST <code>/api/console/inbox/remove</code></h4>
+<p>JSON 同 read。逻辑删除。未选同样报「请先选择要操作的消息！」。</p>
+<h3>10.21 厂商运营台 <code>/api/ops</code></h3>
+<p>与企业工作台同一套后端、另一套登录和界面。路由 <code>/ops</code>，不进企业菜单。JWT <code>scope=ops</code>。</p>
+<h4>POST <code>/api/ops/auth/login</code></h4>
+<p>JSON 同企业登录：<code>loginName</code>、<code>loginPassword</code>。成功 <code>OpsSessionView</code>：<code>token</code>、<code>userId</code>、<code>displayName</code>、<code>scope=ops</code>。演示账号 <code>ops</code> / <code>GooCi@2026</code>。</p>
+<h4>GET <code>/api/ops/session</code></h4>
+<p>当前运营账号，不含 token。</p>
+<h4>GET <code>/api/ops/site</code> / POST <code>/api/ops/site</code></h4>
+<p>读/写 <code>SERVICE_PHONE</code>。POST JSON：<code>servicePhone</code>。空串合法，顶栏显示「预留」。</p>
+<h4>GET <code>/api/ops/enters</code></h4>
+<p>全部企业。<code>OpsEnterRowView</code>：<code>id</code>、<code>enterCode</code>、<code>enterName</code>、<code>certStatus</code>、<code>regionText</code>、<code>appCount</code>、<code>visibleAppCount</code>。</p>
+<h4>GET <code>/api/ops/apps?enterId=</code></h4>
+<p>该企业已植入模块（有入口路径的 <code>TM_APP_OPEN</code>）。<code>health</code>：<code>up</code> 可达 / <code>down</code> 未达 / <code>none</code> 未配目标。<code>healthHint</code> 为探活原因。探活是控制台 JVM 去连 <code>TARGET_URL</code>，不是浏览器、也不是 DNS。</p>
+<p>设备云眼 / 应用管家 / 演示壳这类旧演示行已退役，不出现在此列表。</p>
+<h4>POST <code>/api/ops/apps</code></h4>
+<p>JSON：<code>enterId</code>、<code>appCode</code>、<code>hideFlag</code>（<code>1</code> 隐藏）、<code>targetUrl</code>（只允许 http/https）。成功返回该企业模块列表。</p>
+<h4>POST <code>/api/ops/apps/implant</code></h4>
+<p>厂商给某企业植入模块。模块进程自己不上报。生产流程：把模块部署到该客户 VPC 内的模块机 → 调本接口写入开通记录。<code>TARGET_URL</code> 填该模块机内网地址，浏览器永远不打开这个地址。</p>
+<p>JSON：<code>enterId</code>、<code>appCode</code>、<code>appName</code>、<code>entryPath</code>（可空，默认 <code>/workbench/ext/{appCode}</code>）、<code>targetUrl</code>。已存在则更新名称/入口/目标并重新对客显示。</p>
+<h4>GET <code>/api/ops/icons</code></h4>
+<p>已植入模块去重。图标按代码内置，单独上传覆盖本版本不做。</p>
+<h4>GET <code>/api/ops/changes</code></h4>
+<p>工商/银行待处理申请。只读，不自动过审。</p>
+<h2>11. 首次启动写入的菜单树</h2>
+<p><code>menus</code> 按 <code>SORT_NO</code> 升序组树。根节点 <code>parentId</code> 为空。</p>
+<table><thead><tr><th>层级</th><th>menuCode</th><th>menuName</th><th>routePath</th><th>iconCode</th><th>sortNo</th></tr></thead><tbody><tr><td>根</td><td>workbench</td><td>工作台</td><td>/workbench/home</td><td>monitor</td><td>10</td></tr><tr><td>子</td><td>workbench-home</td><td>工作台</td><td>/workbench/home</td><td></td><td>11</td></tr><tr><td>子</td><td>workbench-profile</td><td>个人信息</td><td>/workbench/profile</td><td></td><td>12</td></tr><tr><td>根</td><td>org</td><td>组织管理</td><td>/workbench/org/enterprise</td><td>office</td><td>20</td></tr><tr><td>子</td><td>org-enterprise</td><td>企业信息</td><td>/workbench/org/enterprise</td><td></td><td>21</td></tr><tr><td>子</td><td>org-structure</td><td>企业组织管理</td><td>/workbench/org/structure</td><td></td><td>22</td></tr><tr><td>子</td><td>org-cert</td><td>实名认证</td><td>/workbench/org/cert</td><td></td><td>23</td></tr><tr><td>子</td><td>org-dept</td><td>企业部门管理</td><td>/workbench/org/dept</td><td></td><td>24</td></tr><tr><td>根</td><td>resource</td><td>资源管理</td><td>/workbench/resource/staff</td><td>collection</td><td>30</td></tr><tr><td>子</td><td>resource-staff</td><td>员工管理</td><td>/workbench/resource/staff</td><td></td><td>31</td></tr><tr><td>子</td><td>resource-device</td><td>设备管理</td><td>/workbench/resource/device</td><td></td><td>32</td></tr><tr><td>根</td><td>perm</td><td>权限管理</td><td>/workbench/perm/app-func</td><td>lock</td><td>40</td></tr><tr><td>子</td><td>perm-func</td><td>APP功能角色</td><td>/workbench/perm/app-func</td><td></td><td>41</td></tr><tr><td>子</td><td>perm-data</td><td>APP数据角色</td><td>/workbench/perm/app-data</td><td></td><td>42</td></tr><tr><td>子</td><td>perm-auth</td><td>APP账号授权</td><td>/workbench/perm/app-auth</td><td></td><td>43</td></tr><tr><td>根</td><td>biz</td><td>业务中心</td><td>/workbench/biz/app</td><td>grid</td><td>50</td></tr><tr><td>子</td><td>biz-app</td><td>工业APP</td><td>/workbench/biz/app</td><td></td><td>51</td></tr><tr><td>子</td><td>biz-todo</td><td>待办任务</td><td>/workbench/biz/todo</td><td></td><td>52</td></tr><tr><td>子</td><td>biz-inbox</td><td>站内信</td><td>/workbench/biz/inbox</td><td></td><td>53</td></tr></tbody></table>
+<p>前端路由与上表 <code>routePath</code> 一一对应。已实现页面：<code>/workbench/home</code>、<code>/workbench/profile</code>、组织管理四页（企业信息 / 企业组织管理 / 实名认证 / 企业部门管理），实名认证下的工商登记变更、银行账户变更，资源管理下的员工管理、设备管理，权限管理三页（APP功能角色 / APP数据角色 / APP账号授权），以及业务中心「工业APP」「待办任务」「站内信」。</p>
+<h2>12. 演示数据（首次启动 Seed）</h2>
+<table><thead><tr><th>项</th><th>值</th></tr></thead><tbody><tr><td>登录名</td><td><code>admin</code></td></tr><tr><td>密码</td><td><code>GooCi@2026</code></td></tr><tr><td>显示名</td><td>管理员</td></tr><tr><td>手机（库内）</td><td>13800000000</td></tr><tr><td>手机（接口）</td><td>138****0000</td></tr><tr><td>角色</td><td>企业管理员</td></tr><tr><td>企业编码</td><td>DEMO</td></tr><tr><td>企业名</td><td>谷器演示工厂</td></tr><tr><td>认证</td><td>1</td></tr><tr><td>地区</td><td>待完善地区信息</td></tr><tr><td>邮箱</td><td>空（页面显示「请添加邮箱」）</td></tr><tr><td>所属部门</td><td>仓库,采购,销售,生产车间</td></tr><tr><td>企业管理员（另 4 人）</td><td>13900001001 刘芳；13900001002 王强；13900001003 陈敏；13900001004 赵磊</td></tr><tr><td>生产车间成员</td><td>10 人演示员工（13800002001 起）</td></tr><tr><td>生产车间设备</td><td>9 台演示数控（GOOCI-SN-1001 起）</td></tr><tr><td>已开通应用</td><td>设备故障预测、礼盒包装AI（管理员功能角色均为超级管理员，数据角色为企业名）。李清河演示授权设备故障预测超级管理员</td></tr><tr><td>SERVICE_PHONE</td><td>空串</td></tr><tr><td>厂商运营</td><td>ops / GooCi@2026，表 <code>TM_OPS_USER</code>，不进企业用户</td></tr></tbody></table>
+<p>Seed 只在对应表为空（或指定编码不存在）时插入，不会覆盖已有数据。已开通应用不是控制台模块，不出现在左侧菜单。</p>
+<h2>13. 前端调用对照</h2>
+<table><thead><tr><th>时机</th><th>方法</th><th>路径</th></tr></thead><tbody><tr><td>打开官网 / 登录页 / 工作台</td><td>GET</td><td><code>/api/site/meta</code></td></tr><tr><td>点登录</td><td>POST</td><td><code>/api/auth/login</code></td></tr><tr><td>获取验证码</td><td>POST</td><td><code>/api/auth/sms</code></td></tr><tr><td>企业/个人注册</td><td>POST</td><td><code>/api/auth/register</code></td></tr><tr><td>进入工作台</td><td>GET</td><td><code>/api/console/session</code></td></tr><tr><td>工作台首页数字</td><td>GET</td><td><code>/api/console/overview</code></td></tr><tr><td>打开个人信息</td><td>GET</td><td><code>/api/console/profile</code></td></tr><tr><td>改姓名</td><td>POST</td><td><code>/api/console/profile/name</code></td></tr><tr><td>改邮箱</td><td>POST</td><td><code>/api/console/profile/mail</code></td></tr><tr><td>改密码</td><td>POST</td><td><code>/api/console/profile/password</code></td></tr><tr><td>企业信息</td><td>GET/POST</td><td><code>/api/console/org/enterprise</code></td></tr><tr><td>企业组织管理</td><td>GET</td><td><code>/api/console/org/structure</code></td></tr><tr><td>可选管理员</td><td>GET</td><td><code>/api/console/org/staff</code></td></tr><tr><td>添加/移除管理员</td><td>POST</td><td><code>/api/console/org/admins</code>、<code>/admins/remove</code></td></tr><tr><td>实名认证</td><td>GET</td><td><code>/api/console/org/cert</code></td></tr><tr><td>工商登记变更</td><td>GET/POST</td><td><code>/api/console/org/cert/biz</code></td></tr><tr><td>银行账户变更</td><td>GET/POST</td><td><code>/api/console/org/cert/bank</code></td></tr><tr><td>认证附件</td><td>POST/GET</td><td><code>/api/console/org/cert/file</code>、<code>/cert/file/{fileId}</code></td></tr><tr><td>部门看板</td><td>GET</td><td><code>/api/console/org/depts</code></td></tr><tr><td>部门新增编辑/禁用/启用</td><td>POST</td><td><code>/api/console/org/depts</code>、<code>/depts/disable</code>、<code>/depts/enable</code></td></tr><tr><td>设备池/确认分配/移除</td><td>GET/POST</td><td><code>/api/console/org/devices/pool</code>、<code>/devices/assign</code>、<code>/devices/remove</code></td></tr><tr><td>新建账号/分配/移除成员</td><td>POST</td><td><code>/api/console/org/members</code>、<code>/members/assign</code>、<code>/members/remove</code></td></tr><tr><td>员工管理</td><td>GET/POST</td><td><code>/api/console/staff</code></td></tr><tr><td>删除员工</td><td>POST</td><td><code>/api/console/staff/remove</code></td></tr><tr><td>编号规则 / 列配置 / 自定义字段</td><td>POST</td><td><code>/api/console/staff/code-rule</code>、<code>/columns</code>、<code>/fields</code>、<code>/fields/remove</code></td></tr><tr><td>员工导入模板 / 表头 / 导入</td><td>GET/POST</td><td><code>/api/console/staff/template</code>、<code>/import-headers</code>、<code>/import</code></td></tr><tr><td>设备管理</td><td>GET/POST</td><td><code>/api/console/devices</code></td></tr><tr><td>删除设备</td><td>POST</td><td><code>/api/console/devices/remove</code></td></tr><tr><td>列配置 / 自定义字段 / 同步</td><td>POST</td><td><code>/api/console/devices/columns</code>、<code>/fields</code>、<code>/fields/remove</code>、<code>/sync</code></td></tr><tr><td>设备导入模板 / 表头 / 导入</td><td>GET/POST</td><td><code>/api/console/devices/template</code>、<code>/import-headers</code>、<code>/import</code></td></tr><tr><td>APP功能/数据角色列表 / 创建</td><td>GET/POST</td><td><code>/api/console/perm/roles</code></td></tr><tr><td>APP账号授权列表 / 详情 / 保存</td><td>GET/POST</td><td><code>/api/console/perm/auth</code>、<code>/auth/detail</code></td></tr><tr><td>工业APP入口 / 隐藏 / 配置管理员</td><td>GET/POST</td><td><code>/api/console/biz/apps</code>、<code>/hide</code>、<code>/admin</code></td></tr><tr><td>待办任务</td><td>GET</td><td><code>/api/console/todo</code></td></tr><tr><td>站内信列表 / 已读 / 删除</td><td>GET/POST</td><td><code>/api/console/inbox</code>、<code>/read</code>、<code>/remove</code></td></tr><tr><td>厂商运营登录</td><td>POST</td><td><code>/api/ops/auth/login</code></td></tr><tr><td>运营会话 / 客服电话</td><td>GET/POST</td><td><code>/api/ops/session</code>、<code>/api/ops/site</code></td></tr><tr><td>企业概览 / 模块 / 植入 / 图标 / 申请</td><td>GET/POST</td><td><code>/api/ops/enters</code>、<code>/apps</code>、<code>/apps/implant</code>、<code>/icons</code>、<code>/changes</code></td></tr><tr><td>点退出</td><td>无接口</td><td>企业清 <code>gooci-token</code>；厂商清 <code>gooci-ops-token</code></td></tr></tbody></table>
+<p>前端拦截：<code>code !== 0</code> 弹错误；HTTP 401 清 token 并跳 <code>/login</code>。</p>
+<h2>14. 其它 HTTP / 异常</h2>
+<table><thead><tr><th>情况</th><th>HTTP</th><th>body</th></tr></thead><tbody><tr><td>JSON 无法解析等未分类异常</td><td>200</td><td><code>{code:1,message:&lt;异常信息或系统异常&gt;}</code></td></tr><tr><td>未覆盖的 Spring 错误（如 404 页面）</td><td>由容器决定</td><td>非 <code>/api</code> 不走这套信封</td></tr></tbody></table>
+<h2>15. 明确没有（当前版本不要调）</h2>
+<p>没有登出、刷新 token。没有改别人密码的接口。</p>
+<p>没有创建下属企业组织挂树、WebSocket、客户自助模块植入。工商/银行变更只收申请，厂商运营台可看清单，不自动过审。</p>
+<p>没有授权码数量、订阅授权、可用/已使用授权码。</p>
+<p>没有按租户域名的接口；账号隔离以后做，现在演示企业码 <code>DEMO</code>，公开注册会另建企业。</p>
+<p>待办任务只有空列表，没有创建/流转接口。站内信可筛选、标记已读、删除，<strong>没有自动推送、没有小程序完工播报写入</strong>。工业 APP 页已实现，演示植入设备故障预测、礼盒包装AI。权限管理三页已实现。已开通 APP 不出现在左侧菜单。厂商运营台不出现在企业工作台。</p>
+<h2>16. 库表（接口读写到的）</h2>
+<p><code>TM_ENTER</code> 企业（含简介、省市区、性质、规模、认证时间、工商/银行变更申请字段）；<code>TM_SYS_USER</code> 用户（含 <code>MAIL_ADDR</code>、<code>STAFF_CODE</code>、<code>REMARK_TEXT</code>、<code>WECHAT_NO</code>、<code>DING_NO</code>、<code>CARD_NO</code>）；<code>TM_SYS_MENU</code> 菜单；<code>TS_SYS_PARAMETER</code> 参数；<code>TM_DEPT</code> 部门；<code>TR_USER_DEPT</code> 用户部门；<code>TR_USER_APP_GRANT</code> 用户已开通应用（功能/数据角色名可顿号拼接）；<code>TM_APP_OPEN</code> 企业已开通（已植入）APP（含 <code>HIDE_FLAG</code>、<code>ENTRY_PATH</code>、<code>TARGET_URL</code>，有入口才进工业 APP 页；<code>TARGET_URL</code> 是内网模块机，空则网关出本地壳）；<code>TM_APP_ROLE</code> 功能/数据角色目录；<code>TM_DEVICE</code> 设备（含编号、类型、制造商、安装位置、购置日期、状态、等级、包机人、备注、联网标记）；<code>TM_DEVICE_CODE_RULE</code> 设备编号流水与列配置；<code>TM_DEVICE_FIELD</code> 设备自定义字段；<code>TM_DEVICE_FIELD_VAL</code> 设备字段取值；<code>TM_STAFF_CODE_RULE</code> 员工编号规则与列配置；<code>TM_STAFF_FIELD</code> 自定义字段；<code>TM_STAFF_FIELD_VAL</code> 字段取值；<code>TM_TODO</code> 待办（当前无写入）；<code>TM_INBOX</code> 站内信（当前用户收件，无自动推送）；<code>TM_OPS_USER</code> 厂商运营账号（不进企业用户表）。</p>
+<p>逻辑删除字段 <code>IS_DELETE</code>：<code>0</code> 正常 / <code>1</code> 删除。接口只读未删除行。</p>
+<p>建表脚本：<code>backend/src/main/resources/db/schema.sql</code>。已有库补列：<code>schema-patch.sql</code>。查询索引按「表名 + I + 序号」补齐，I01 留给 UNIQUE。</p></article>
+<article class="page" id="arch"><h1>架构复习 · 目录</h1>
+<p>对照样例：iSESOL（官网/工作台混在一起，产品用子域名）。我们不学这种。  </p>
+<p>模块清单：<code>../模块产品清单.json</code>（20 个可售模块，不是出厂预装清单）。</p>
+<p>按主题分开看，不必一次读完。</p>
+<table><thead><tr><th>文件</th><th>覆盖的问题</th></tr></thead><tbody><tr><td><a href="#arch-01">01-产品形态与交付.md</a></td><td>要做成什么样；云/本地；两个月做什么；模块怎么卖、扩容谁来做</td></tr><tr><td><a href="#arch-02">02-模块植入与不停机.md</a></td><td>一个域名一条路径；旁挂 vs 并入；旁挂是不是就不停机</td></tr><tr><td><a href="#arch-03">03-域名备案与客户账号.md</a></td><td>别人家域名怎么配；一个域名几个 IP；不想每家买域名/备案/服务器</td></tr><tr><td><a href="#arch-04">04-云服务器拼法.md</a></td><td>会不会要巨无霸机器；公网怎么拼进一个域名；程序机/库/文件去哪买</td></tr><tr><td><a href="#arch-05">05-小程序与数据接入.md</a></td><td>小程序怎么分用户；数据接入助手是什么</td></tr><tr><td><a href="#arch-06">06-磁盘与200G.md</a></td><td>16核32G 系统盘数据盘；200G 行不行；不能扩怎么办；多少数据能用满</td></tr><tr><td><a href="#arch-07">07-总图与口诀.md</a></td><td>已拍板总图；三句口诀</td></tr></tbody></table></article>
+<article class="page" id="arch-01"><h1>01 产品形态与交付</h1>
+<p><a href="#arch">← 目录</a></p>
+<hr>
+<h2>要做成什么样</h2>
+<ul>
+<li>一个系统，多个模块，<strong>可拔插</strong>：用户要什么再开发、再植入，系统里不预装 20 个入口。</li>
+<li>未植入的模块：菜单、权限、API 都不出现。</li>
+<li>模块支持二次定制（按客户业务微调），打成包再植入，不改内核。</li>
+<li>官网是官网，工作台是工作台，<strong>不要混在一个站里</strong>（不要学 iSESOL 那种顶部还是「首页/产品/解决方案」，中间却是工作台）。</li>
+</ul>
+<h2>部署</h2>
+<table><thead><tr><th>方式</th><th>谁用</th><th>怎么进</th></tr></thead><tbody><tr><td>云</td><td>能联网的客户</td><td>打开你们已备案的同一个网址，登录进工作台</td></tr><tr><td>本地 EXE</td><td>不能联网的工厂</td><td>本机软件启动同一套控制台，没有域名这件事</td></tr></tbody></table>
+<p>云端默认：<strong>很多客户共用你们的服务器池，靠账号隔离</strong>。  </p>
+<p>「一号一机」只留给加钱独占，或本地断网部署，不是每成交一家就买一台、买一个域名。</p>
+<h2>两个月交付边界（AI 全栈）</h2>
+<p>工作台一次生成多端（Web / 小程序 / App / EXE 壳），人不必按端拆组。</p>
+<p>两个月做三件：</p>
+<ol>
+<li>运行时内核 + <strong>中心控制台完整</strong></li>
+<li>一份模块模板（可复制、可定制、可植入）</li>
+<li>你们侧的开通 / 植入 / 扩容作业（客户不自助点按钮）</li>
+</ol>
+<p>20 个业务模块出厂不开发完、不放进系统，只预留模板。样板模块建议先定「轻工单 + 设备维保」。</p>
+<p>人员：2～3 个 AI 全栈即可（1 人冻契约/内核，1 人按契约出全端，交付可兼任）。</p>
+<h2>客户怎么买模块、怎么扩容</h2>
+<ul>
+<li>客户要某模块：你们按模板定制 → 植入他的运行时 → 菜单才出现。</li>
+<li>扩容、加机器、加盘：你们做，不是客户自助。</li>
+<li>目标：扩容期间客户系统尽量不停机（旁路新机同步后再切入口）。</li>
+</ul></article>
+<article class="page" id="arch-02"><h1>02 模块植入与不停机</h1>
+<p><a href="#arch">← 目录</a></p>
+<hr>
+<h2>客户永远只看到一个域名、一条路径</h2>
+<pre><code>https://www.goci.com/                 官网（独立，进工作台后不再出现营销页）
+https://www.goci.com/工作台/          控制台壳
+https://www.goci.com/工作台/轻工单
+https://www.goci.com/工作台/设备维保</code></pre>
+<p>不是 20 个模块 20 个域名。  </p>
+<p>不是 <code>e1.isesol.com</code> 这种子域名产品站。</p>
+<h2>旁挂 vs 并入（由能不能停机决定）</h2>
+<pre><code>不能停机  → 模块先单独起后端（旁挂）
+            网关把 /工作台/模块名 转到这份进程
+            客户路径不变
+
+能停机    → 模块真正并入主后端
+            路径仍是 /工作台/模块名
+            少一个进程</code></pre>
+<p>旁挂是过渡，能合并就合并。</p>
+<p>控制台记的是绑定，不是另一套网址：</p>
+<pre><code>Route = {
+  path: &quot;/工作台/轻工单&quot;,
+  mode: sidecar | merged,    // 旁挂 | 已并入
+  target: &quot;主后端&quot; | &quot;本机:端口&quot;,
+  pluginId, version
+}</code></pre>
+<p>可见模块 = 已植入 ∩ 许可有效 ∩ 已启用。</p>
+<h2>旁挂就能不停机吗？</h2>
+<p><strong>不完全是。</strong> 旁挂只保证：主后端不用重启，旧模块还能用。</p>
+<p>不停机还要同时满足：</p>
+<ol>
+<li>控制台菜单运行时拉取，不是打包死在页面里</li>
+<li>网关能热加载路由（reload，不是重启整机）</li>
+<li>新模块只建自己的表，不改内核表、不锁共享表</li>
+<li>不要求先升级内核、不改登录/权限协议</li>
+<li>先探活成功再挂路径；失败就摘掉，等于没接入</li>
+</ol>
+<p>会破功的：改用户/权限表结构、内核太老必须先升、菜单写死在前端包、网关只能重启、新模块要改已有流程。</p>
+<p>作业顺序：</p>
+<pre><code>拉起模块进程（此时还没有路径）
+  → 跑只属于它的库表
+  → 探活成功
+  → 热挂 /工作台/模块名
+  → 刷新后菜单出现</code></pre>
+<table><thead><tr><th>动作</th><th>停不停机</th></tr></thead><tbody><tr><td>旁挂接入新模块</td><td>满足上面 5 条时不停</td></tr><tr><td>并入主后端</td><td>要停机窗口</td></tr><tr><td>扩容换机</td><td>旁路切入口，另一套不停机</td></tr></tbody></table>
+<p>内核如果没有「动态菜单 + 热加载路由 + 模块私有表」，旁挂只是多起了个进程。</p>
+<h2>测试环境怎么展示跳转（不另开公网）</h2>
+<p>域名 A 记录只指向网关。测试机没有第二台公网 IP，也不写第二条 A 记录。</p>
+<pre><code>客户点击工业 APP 砖块
+  → /workbench/ext/{appCode}     工作台壳（登录后，客户只看到这一条路径）
+  → 同域 /ext/{appCode}/**       网关入口（演示与生产同一条）
+  → TARGET_URL 有值：网关转到模块机（本机示例 127.0.0.1:5174 / 8777，上云换内网机）
+  → 模块机未启动：提示未跳到
+  → TARGET_URL 为空：控制台内置壳
+浏览器从不打开模块端口，也不写第二条公网 A 记录。
+
+## 生产环境：控制台怎么知道这家公司加了模块
+
+模块进程自己不上报、不回调。一家客户一套 VPC / 云服务器组，模块只部署在这组内网机上。
+
+厂商作业顺序：
+</code></pre>
+<p>在该客户 VPC 拉起模块进程（此时客户还看不见）</p>
+<p>  → 跑只属于它的库表</p>
+<p>  → 调 POST /api/ops/apps/implant</p>
+<p>       enterId / appCode / appName</p>
+<p>       TARGET_URL = 该客户模块机内网地址（如 http://10.x.x.x:8777）</p>
+<p>  → 控制台写 TM_APP_OPEN</p>
+<p>  → 客户刷新后工业 APP 出现砖块</p>
+<p>  → 浏览器仍只走同域 /ext/{appCode}，由网关转到内网 TARGET_URL</p>
+<pre><code>
+探活是控制台 JVM 去连 TARGET_URL。控制台必须和模块机在同一 VPC（或有内网路由）。可达 ≠ 公网通；未达通常是模块没起来、端口写错、安全组没放行。
+
+运营台改已有模块的隐藏和目标用 `POST /api/ops/apps`，新增才用 implant。
+
+网关只改 HTML 的 src/href、CSS url、以及 JS 里的静态资源根（`/assets/` `/src/` 等）。**不改** JS 里的 `&#x27;/&#x27;`、路由 path。接口请求靠注入的 fetch 钩子转到 `/ext/{appCode}`。改写过猛会导致模块白屏或按钮失效，不是必然。
+</code></pre>
+<p>本机当前两条：故障预测画面 <code>5174</code>（其后端 <code>8000</code>）、礼盒包装 AI <code>8777</code>。不要把 Vite 的 Network IP 写进 DNS 或 <code>TARGET_URL</code>。静态壳仍可用 8091：</p>
+<pre><code>cd modules/demo-shell &amp;&amp; python3 -m http.server 8091 --bind 127.0.0.1</code></pre></article>
+<article class="page" id="arch-03"><h1>03 域名备案与客户账号</h1>
+<p><a href="#arch">← 目录</a></p>
+<hr>
+<h2>别人家（iSESOL）域名是怎么配的</h2>
+<p>截图事实：</p>
+<pre><code>isesol.com        门户 + 工作台聚合（官网导航和工作台混在一起）
+e1.isesol.com     「设备云眼」独立产品站
+app.isesol.com    应用商城</code></pre>
+<p>点「设备云眼」会离开门户主机名，进子域名。这是 <strong>门户 + 产品子域名</strong>，不是一台机一个路径。</p>
+<p>更像多客户共用的 SaaS 产品集群，<strong>不是</strong>「一家客户一台机、所有模块挂在同一路径」。  </p>
+<p>不要学子域名矩阵。</p>
+<h2>一个域名能解析几个 IP、几台云服务器</h2>
+<ul>
+<li>一个主机名可以挂很多条 A 记录，协议没有「最多 2 个 IP」。</li>
+<li><strong>多 IP ≠ 按客户选机器。</strong> DNS 只会轮询/随便给一个 IP，不认登录账号。</li>
+<li>同一名字一般不能既做 CNAME 又做 A。</li>
+</ul>
+<p>正确三层：</p>
+<pre><code>域名
+  → 解析出 1～N 个 IP（用户只看到这层）
+      → IP 后面可以是一台云服务器
+        或一台入口/负载均衡，后面再挂很多云服务器</code></pre>
+<table><thead><tr><th>用法</th><th>行不行</th></tr></thead><tbody><tr><td>一域名 → 一个 IP → 一台机</td><td>开张可以</td></tr><tr><td>一域名 → 多个公网 IP 轮询多台客户机</td><td><strong>不行</strong>，客户会串</td></tr><tr><td>一域名 → 一两个入口 IP → 入口再转到很多机</td><td><strong>正路</strong></td></tr></tbody></table>
+<p><strong>域名解析条数不必等于云服务器台数。</strong>  </p>
+<p>公用域名只指向入口；后面机器用内网，不必写进域名。</p>
+<h2>很多客户，不想每家买域名、备案、服务器</h2>
+<h3>对外卖什么</h3>
+<p>客户拿到：账号 + 开通了哪些模块。  </p>
+<p>客户打开：你们已经备案好的 <strong>同一个网址</strong>。  </p>
+<p>客户没有：自己的域名、自己的备案、自己的云账号。</p>
+<p>你们只做一次：1 个域名、备案 1 次、先买少量云服务器。</p>
+<pre><code>https://www.goci.com/工作台
+登录 A 厂 → 只看到 A 的数据
+登录 B 厂 → 还是这个网址，数据另一套</code></pre>
+<p>不能联网：装 EXE，本机打开，连域名都不用。</p>
+<h3>默认不要「一号一机」</h3>
+<p>默认隔离靠 <strong>账号 + 客户 ID</strong>，不靠一人一台机、一人一个域名。</p>
+<p>一人一台机只留给：断网本地，或愿意加钱独占的大客户。</p>
+<p>子域名（<code>a厂.goci.com</code>）也不当默认，多一层管理。默认就一个网址，靠登录区分。</p>
+<p>客户想用自己公司域名访问：那才要客户自己备案，当定制，默认不提供。</p></article>
+<article class="page" id="arch-04"><h1>04 云服务器拼法</h1>
+<p><a href="#arch">← 目录</a></p>
+<hr>
+<h2>会不会要买一台巨大的云服务器</h2>
+<p><strong>不用。</strong> 也不存在好买的「无限大一台」。</p>
+<p>客户变多 = <strong>多买几台普通云服务器拼在一起</strong>，不是把一台越买越大。</p>
+<pre><code>www.goci.com
+    ↓
+门口（入口，域名只指这里）
+    ↓
+房间1  8核32G
+房间2  8核32G
+房间3  16核64G
+……以后再加房间</code></pre>
+<p>阿里云 / 腾讯云 / 华为云卖的就是 2 核、4 核、8 核、16 核。  </p>
+<p>先买 1 台普通机就能开张。加机器时客户网址不变。</p>
+<h2>迷点：每台都有公网，怎么拼进一个域名</h2>
+<p>每台云服务器都可以有公网 IP，但 <strong>不必都写进域名</strong>。  </p>
+<p>域名只认一个门牌号（门口那台的公网）。</p>
+<p>请求怎么走：</p>
+<pre><code>1. 电脑问：goci.com 是哪个 IP？  答案只有门口 1.1.1.1
+2. 请求打到门口
+3. 门口按路径内网转发：
+     /工作台     → 程序机 192.168.0.20
+     数据        → 程序机再问数据库机 192.168.0.30
+4. 结果仍从门口回到浏览器</code></pre>
+<p>「拼」= <strong>只有门口暴露公网；别的机器走内网，由门口转发。</strong></p>
+<table><thead><tr><th>角色</th><th>要不要公网</th><th>写不写进域名</th></tr></thead><tbody><tr><td>门口</td><td>要</td><td>只写它</td></tr><tr><td>程序 / 数据库 / 文件</td><td>最好不要公网，只要内网</td><td>不写</td></tr></tbody></table>
+<p>必须：<strong>同一云账号、同一地域、同一个 VPC（专有网络）</strong>。  </p>
+<p>上海一台 + 北京一台，内网拼不上。</p>
+<h2>去哪买「程序机、数据库机、文件机」</h2>
+<p>还在你买第一台的那家云控制台买，不是另一种商品、也不是另一家公司。</p>
+<table><thead><tr><th>角色</th><th>控制台里买什么</th></tr></thead><tbody><tr><td>门口 / 程序</td><td>再买一台普通「云服务器」</td></tr><tr><td>数据库</td><td>优先买「云数据库」（比自己开一台装库省事）</td></tr><tr><td>文件/图纸</td><td>买「对象存储」，这是网盘，不是又一台服务器</td></tr></tbody></table>
+<p>开张甚至 <strong>先别买</strong>：一台把程序、库、文件全装完。人多了再拆。</p>
+<p>已开了好几台：</p>
+<ul>
+<li>同一 VPC：指定一台当门口，其余当程序/库，暂时不用的可关机停费。</li>
+<li>不同地域：只能留一个地区来拼。</li>
+</ul>
+<p>合并就三步：同一 VPC → 记下内网 IP → 填进门口通讯录。域名一行都不用改。</p>
+<h2>按已有台数怎么分工</h2>
+<pre><code>1 台：全放一起，先开张
+
+2 台：门口+程序 / 数据库
+
+3 台：门口 / 程序 / 数据库+文件
+
+4 台+：门口 / 两台程序互备 / 数据库 / 文件或采集</code></pre></article>
+<article class="page" id="arch-05"><h1>05 小程序与数据接入</h1>
+<p><a href="#arch">← 目录</a></p>
+<hr>
+<h2>小程序怎么分用户</h2>
+<p>小程序也是全中国 <strong>共用一个</strong>，不要给每家工厂各申请一个。</p>
+<pre><code>网站：同一个 www.goci.com
+小程序：微信里同一个「你们的工业助手」</code></pre>
+<p>打开之后：</p>
+<pre><code>微信给出 openid（哪个微信号）
+  → 你们系统绑定：哪个员工、哪家工厂
+  → 之后请求都带这个身份
+  → 只返回这家数据</code></pre>
+<pre><code>微信号 openid  →  员工账号  →  工厂客户ID</code></pre>
+<p>没绑定过：先登录你们发的账号（或管理员邀请），绑一次。  </p>
+<p>一个人管两家厂：登录后选进哪家。</p>
+<p>小程序没有自己的云服务器、不用单独备案；只是手机壳，数据打到同一扇门口。</p>
+<p>「授权 / 免授权」是这家开没开某个模块，不是「给这家单独做一个小程序」。</p>
+<h2>「数据接入助手」是什么（iSESOL 样例）</h2>
+<p>不是给工人点的报工页，是给「要用数据的人 / 对接别的软件」的付费能力。</p>
+<pre><code>机床 → iSESOL BOX（现场采集盒子）
+     → 数据接入助手（开通后给一个数据端口）
+     → 设备云眼 / 第三方系统 / 开发者</code></pre>
+<p>截图原意：连上助手，用给定端口访问 BOX 的实时数据。年费约 3600，不是买盒子本身。</p>
+<p>和另外两个应用的差别：</p>
+<table><thead><tr><th>应用</th><th>干什么</th></tr></thead><tbody><tr><td>数据接入助手</td><td>把盒子数据对外开放</td></tr><tr><td>设备云眼</td><td>给人看监控、时长、产量</td></tr><tr><td>应用管家</td><td>管盒子上要装哪些应用</td></tr></tbody></table>
+<p>对应你们清单里的 <strong>设备联网数据采集</strong> 的「出口」：没有接入，监控/能耗/安灯就没有活数据；有接入也不等于已经有看板。</p></article>
+<article class="page" id="arch-06"><h1>06 磁盘与200G</h1>
+<p><a href="#arch">← 目录</a></p>
+<p>口径：VPC 网络，<strong>16 核 32G</strong>，50 台设备的工厂，先不分库、不分文件机。</p>
+<p>对 50 台设备：核数和内存够用；以后更可能缺的是内存和盘，不是核数。  </p>
+<p>带宽约 25M 对 50 台设备够用。</p>
+<hr>
+<h2>盘怎么买</h2>
+<table><thead><tr><th>盘</th><th>建议</th><th>用途</th></tr></thead><tbody><tr><td>系统盘</td><td><strong>80～100G SSD</strong></td><td>系统、程序。40G 太小</td></tr><tr><td>数据盘</td><td><strong>200G 可以先买</strong>（单独挂一块）</td><td>数据库、设备历史、热附件</td></tr></tbody></table>
+<p>系统盘只放系统和程序；数据盘放库和日志；图纸/录像不要堆这两块，走对象存储。</p>
+<p>200G 成立的前提：</p>
+<ul>
+<li>图纸不大堆在数据盘</li>
+<li>没有摄像头录像</li>
+<li>采集不要长期存每秒原始波形</li>
+</ul>
+<p>用到约七成（约 140G）再扩或加挂。</p>
+<h2>200G 等于多少数据</h2>
+<p>真正能用的按约 <strong>140G</strong> 算（盘不能 100% 堆满）。</p>
+<table><thead><tr><th>存什么</th><th>大概多少能占满 200G</th></tr></thead><tbody><tr><td>工单、库存、用户表</td><td>几百万到上千万条也常常不到几十 G，单靠业务表很难吃满</td></tr><tr><td>50 台设备，每分钟一笔状态</td><td>大约 5～8 年</td></tr><tr><td>50 台设备，每 10 秒一笔</td><td>大约 1～1.5 年</td></tr><tr><td>50 台设备，每 1 秒原始点</td><td>大约 1～2 个月</td></tr><tr><td>照片（约 2M/张）</td><td>约 10 万张</td></tr><tr><td>图纸 PDF（约 10M/份）</td><td>约 2 万份</td></tr><tr><td>1 路摄像头录像</td><td>大约 7～10 天</td></tr></tbody></table>
+<p>50 台设备常见用法（几秒到几十秒一个点、热数据留 1 年、图纸不多、无录像），一年大约 50～120G。  </p>
+<p><strong>200G ≈ 一年的 50 台设备常规监控 + 业务库。</strong></p>
+<h2>数据盘不能扩容怎么办</h2>
+<p>不等于整机报废。顺序：</p>
+<ol>
+<li><strong>再挂一块新盘</strong>（很多机型不能改大原盘，但允许加挂）</li>
+<li>图纸/备份改放到对象存储，原盘立刻变瘦</li>
+<li>新买更大一块盘，把数据拷过去，改挂载点，旧盘先留几天再卸</li>
+<li>再不行就拆：程序仍在原机，数据库改云数据库/另一台，文件改对象存储；域名仍指门口</li>
+</ol>
+<p>同时省着花：日志 15～30 天、原始点位只留短周期、备份不堆同一块数据盘。</p>
+<p>拷库换盘时最好有短窗口，避免写到一半。</p></article>
+<article class="page" id="arch-07"><h1>07 总图与口诀</h1>
+<p><a href="#arch">← 目录</a></p>
+<hr>
+<h2>已经拍板的总图</h2>
+<pre><code>你们公司
+  1 个已备案域名
+  1 扇门口（域名只解析到它）
+  后面按需加：程序机 / 云数据库 / 对象存储
+  全是普通规格，同一 VPC 内网互通
+
+客户
+  同一个网址登录
+  同一个小程序打开
+  账号决定是哪家工厂、开了哪些模块
+  不买域名、不备案、不买服务器
+
+模块
+  模板复制 → 定制包 → 植入
+  路径：/工作台/模块名
+  不能停机就旁挂，能停机就并入主后端
+
+本地不能联网
+  EXE 启动同一控制台</code></pre>
+<h2>三句口诀</h2>
+<ol>
+<li><strong>全中国客户共用你们一个已备案域名、一个小程序；靠登录分用户。</strong></li>
+<li><strong>域名只指向门口；其它云服务器买在同一家云、同一地区、同一 VPC，走内网。</strong></li>
+<li><strong>模块按需植入，不预装 20 个；50 台设备开张：16 核 32G + 系统盘 100G + 数据盘 200G 可以先上。</strong></li>
+</ol></article>
+</main>
+</div>
+<script>
+const pages = document.querySelectorAll(".page");
+const links = document.querySelectorAll("nav a");
+function show(id) {
+  const key = id.replace(/^#/, "") || "api";
+  pages.forEach((p) => p.classList.toggle("on", p.id === key));
+  links.forEach((a) => a.classList.toggle("on", a.getAttribute("href") === "#" + key));
+  window.scrollTo(0, 0);
+}
+window.addEventListener("hashchange", () => show(location.hash));
+show(location.hash);
+</script>
+</body>
+</html>

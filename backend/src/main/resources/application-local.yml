@@ -1,0 +1,17 @@
+# 本机开发默认档。文件库在 backend/data/gooci.mv.db
+spring:
+  datasource:
+    url: jdbc:h2:file:./data/gooci;MODE=MySQL;DATABASE_TO_UPPER=TRUE;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+  h2:
+    console:
+      enabled: true
+      path: /h2
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/schema.sql,classpath:db/schema-patch.sql
+      encoding: UTF-8
+      continue-on-error: true

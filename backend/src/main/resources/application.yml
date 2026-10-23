@@ -1,0 +1,32 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gooci-console
+  profiles:
+    default: local
+  jackson:
+    time-zone: Asia/Shanghai
+  servlet:
+    multipart:
+      max-file-size: 4MB
+      max-request-size: 8MB
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: assign_uuid
+      logic-delete-field: deleted
+      logic-delete-value: "1"
+      logic-not-delete-value: "0"
+
+gooci:
+  jwt-secret: gooci-console-dev-secret-change-before-release-2026
+  jwt-expire-hours: 12
+  service-phone: ""
+  ext-demo-url: http://127.0.0.1:8091
+  ext-pdm-url: http://127.0.0.1:5174
+  ext-pack-url: http://127.0.0.1:8777

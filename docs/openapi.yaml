@@ -1,0 +1,2626 @@
+openapi: 3.0.3
+info:
+  title: GOOCI 控制台 API
+  version: 0.1.0
+  description: |
+    与代码同步的内核接口。业务失败为 HTTP 200 且 code=1。
+    未登录访问受保护接口为 HTTP 401。
+    外接模块同域入口 GET /ext/{appCode} 出 HTML 壳，不走 /api 信封。
+servers:
+  - url: http://127.0.0.1:8080
+    description: 直连后端
+  - url: http://127.0.0.1:5173
+    description: Vite 开发代理
+tags:
+  - name: site
+  - name: auth
+  - name: console
+  - name: profile
+  - name: org
+  - name: staff
+  - name: device
+  - name: perm
+  - name: biz
+  - name: ops
+  - name: todo
+paths:
+  /api/site/meta:
+    get:
+      tags: [site]
+      summary: 官网公开信息
+      operationId: getSiteMeta
+      security: []
+      responses:
+        "200":
+          description: 信封。成功时 data 含 brandName、servicePhone
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultSiteMeta"
+              examples:
+                ok:
+                  value:
+                    code: 0
+                    message: ok
+                    data:
+                      brandName: GOOCI 谷器
+                      servicePhone: ""
+  /api/auth/login:
+    post:
+      tags: [auth]
+      summary: 登录
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginCommand"
+            example:
+              loginName: admin
+              loginPassword: GooCi@2026
+      responses:
+        "200":
+          description: 成功返回 SessionView（含 token）；失败 code=1
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultSession"
+  /api/auth/sms:
+    post:
+      tags: [auth]
+      summary: 发送注册验证码
+      operationId: sendSms
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SmsCodeCommand"
+      responses:
+        "200":
+          description: data.demoCode 为演示验证码
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultSms"
+  /api/auth/register:
+    post:
+      tags: [auth]
+      summary: 企业或个人注册
+      operationId: register
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterCommand"
+      responses:
+        "200":
+          description: 成功返回 SessionView（含 token）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultSession"
+  /api/console/session:
+    get:
+      tags: [console]
+      summary: 当前会话
+      operationId: getSession
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: SessionView，token 为 null
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultSession"
+        "401":
+          description: 未登录或登录已过期
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultVoid"
+              example:
+                code: 1
+                message: 未登录或登录已过期
+                data: null
+  /api/console/overview:
+    get:
+      tags: [console]
+      summary: 工作台概览
+      operationId: getOverview
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: 未读站内信、待办条数来自库；设备数仍为 0
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultOverview"
+        "401":
+          description: 未登录或登录已过期
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultVoid"
+  /api/console/profile:
+    get:
+      tags: [profile]
+      summary: 当前用户个人信息
+      operationId: getProfile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: ProfileView。手机号明文，mailAddr 未填为空串
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultProfile"
+        "401":
+          description: 未登录或登录已过期
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultVoid"
+  /api/console/profile/name:
+    post:
+      tags: [profile]
+      summary: 改姓名
+      operationId: updateProfileName
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNameCommand"
+            example:
+              displayName: 管理员
+      responses:
+        "200":
+          description: 成功返回更新后的 ProfileView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultProfile"
+        "401":
+          description: 未登录或登录已过期
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultVoid"
+  /api/console/profile/mail:
+    post:
+      tags: [profile]
+      summary: 改或清空邮箱
+      operationId: updateProfileMail
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMailCommand"
+            example:
+              mailAddr: ""
+      responses:
+        "200":
+          description: 成功返回更新后的 ProfileView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultProfile"
+        "401":
+          description: 未登录或登录已过期
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultVoid"
+  /api/console/profile/password:
+    post:
+      tags: [profile]
+      summary: 改登录密码
+      operationId: updateProfilePassword
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePasswordCommand"
+            example:
+              oldPassword: GooCi@2026
+              newPassword: GooCi@2026x
+      responses:
+        "200":
+          description: 成功 data 为 null
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultVoid"
+        "401":
+          description: 未登录或登录已过期
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultVoid"
+  /api/console/org/enterprise:
+    get:
+      tags: [org]
+      summary: 企业信息
+      operationId: getEnterprise
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: EnterProfileView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultEnter"
+    post:
+      tags: [org]
+      summary: 完善企业资料
+      operationId: updateEnterprise
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateEnterCommand"
+      responses:
+        "200":
+          description: 更新后的 EnterProfileView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultEnter"
+  /api/console/org/structure:
+    get:
+      tags: [org]
+      summary: 企业组织管理
+      operationId: getOrgStructure
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OrgStructureView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultStructure"
+  /api/console/org/staff:
+    get:
+      tags: [org]
+      summary: 可选管理员名单
+      operationId: listOrgStaff
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: deptId
+          schema: { type: string }
+        - in: query
+          name: keyword
+          schema: { type: string }
+        - in: query
+          name: pageNo
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, default: 5 }
+      responses:
+        "200":
+          description: SliceView of StaffRowView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultStaffSlice"
+  /api/console/org/admins:
+    post:
+      tags: [org]
+      summary: 从已有人员提升为企业管理员
+      operationId: addAdmin
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PromoteAdminCommand"
+      responses:
+        "200":
+          description: data 为 null
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultVoid"
+  /api/console/org/admins/remove:
+    post:
+      tags: [org]
+      summary: 移除企业管理员
+      operationId: removeAdmin
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RemoveStaffCommand"
+      responses:
+        "200":
+          description: data 为 null
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultVoid"
+  /api/console/org/cert:
+    get:
+      tags: [org]
+      summary: 实名认证
+      operationId: getCert
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: CertView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultCert"
+  /api/console/org/cert/biz:
+    get:
+      tags: [org]
+      summary: 工商登记变更表
+      operationId: getBizChange
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: BizChangeView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultBizChange"
+    post:
+      tags: [org]
+      summary: 提交工商登记变更申请
+      operationId: saveBizChange
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveBizChangeCommand"
+      responses:
+        "200":
+          description: BizChangeView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultBizChange"
+  /api/console/org/cert/bank:
+    get:
+      tags: [org]
+      summary: 银行账户变更表
+      operationId: getBankChange
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: BankChangeView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultBankChange"
+    post:
+      tags: [org]
+      summary: 提交银行账户变更申请
+      operationId: saveBankChange
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveBankChangeCommand"
+      responses:
+        "200":
+          description: BankChangeView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultBankChange"
+  /api/console/org/cert/file:
+    post:
+      tags: [org]
+      summary: 上传认证附件
+      operationId: uploadCertFile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "200":
+          description: FileSavedView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultFileSaved"
+  /api/console/org/cert/file/{fileId}:
+    get:
+      tags: [org]
+      summary: 读取认证附件
+      operationId: getCertFile
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: fileId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 文件流
+  /api/console/org/depts:
+    get:
+      tags: [org]
+      summary: 部门管理看板
+      operationId: getDepts
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: deptId
+          schema: { type: string }
+        - in: query
+          name: devicePage
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: memberPage
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, default: 5 }
+      responses:
+        "200":
+          description: DeptBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultDeptBoard"
+    post:
+      tags: [org]
+      summary: 新增或编辑部门
+      operationId: saveDept
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveDeptCommand"
+      responses:
+        "200":
+          description: DeptBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultDeptBoard"
+  /api/console/org/depts/disable:
+    post:
+      tags: [org]
+      summary: 禁用部门
+      operationId: disableDept
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeptIdCommand"
+      responses:
+        "200":
+          description: DeptBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultDeptBoard"
+  /api/console/org/depts/enable:
+    post:
+      tags: [org]
+      summary: 启用部门
+      operationId: enableDept
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeptIdCommand"
+      responses:
+        "200":
+          description: DeptBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultDeptBoard"
+  /api/console/org/devices:
+    post:
+      tags: [org]
+      summary: 分配设备
+      operationId: addDevice
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveDeviceCommand"
+      responses:
+        "200":
+          description: DeptBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultDeptBoard"
+  /api/console/org/devices/pool:
+    get:
+      tags: [org]
+      summary: 部门设备待分配/已分配
+      operationId: getDevicePool
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: deptId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: DevicePoolView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultDevicePool"
+  /api/console/org/devices/assign:
+    post:
+      tags: [org]
+      summary: 确认部门已分配设备
+      operationId: assignDevices
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignDeviceCommand"
+      responses:
+        "200":
+          description: DeptBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultDeptBoard"
+  /api/console/org/devices/remove:
+    post:
+      tags: [org]
+      summary: 从部门移除设备
+      operationId: removeDevice
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RemoveDeviceCommand"
+      responses:
+        "200":
+          description: DeptBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultDeptBoard"
+  /api/console/org/members:
+    post:
+      tags: [org]
+      summary: 分配成员
+      operationId: addMember
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddStaffCommand"
+      responses:
+        "200":
+          description: DeptBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultDeptBoard"
+  /api/console/org/members/assign:
+    post:
+      tags: [org]
+      summary: 把已有人员绑定到部门
+      operationId: assignMembers
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignMemberCommand"
+      responses:
+        "200":
+          description: DeptBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultDeptBoard"
+  /api/console/org/members/remove:
+    post:
+      tags: [org]
+      summary: 从部门移除成员
+      operationId: removeMember
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RemoveStaffCommand"
+      responses:
+        "200":
+          description: DeptBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultDeptBoard"
+  /api/console/staff:
+    get:
+      tags: [staff]
+      summary: 员工管理看板
+      operationId: getStaffBoard
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: keyword
+          schema: { type: string }
+        - in: query
+          name: pageNo
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, default: 10 }
+      responses:
+        "200":
+          description: StaffBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultStaffBoard"
+    post:
+      tags: [staff]
+      summary: 新增或编辑员工
+      operationId: saveStaff
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveStaffCommand"
+      responses:
+        "200":
+          description: StaffBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultStaffBoard"
+  /api/console/staff/remove:
+    post:
+      tags: [staff]
+      summary: 删除员工
+      operationId: removeStaffUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StaffIdCommand"
+      responses:
+        "200":
+          description: StaffBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultStaffBoard"
+  /api/console/staff/code-rule:
+    post:
+      tags: [staff]
+      summary: 保存员工编号规则
+      operationId: saveStaffCodeRule
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveStaffCodeRuleCommand"
+      responses:
+        "200":
+          description: StaffCodeRuleView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultStaffCodeRule"
+  /api/console/staff/columns:
+    post:
+      tags: [staff]
+      summary: 保存列表可见列
+      operationId: saveStaffColumns
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveStaffColumnsCommand"
+      responses:
+        "200":
+          description: StaffBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultStaffBoard"
+  /api/console/staff/fields:
+    post:
+      tags: [staff]
+      summary: 保存自定义字段
+      operationId: saveStaffField
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveStaffFieldCommand"
+      responses:
+        "200":
+          description: StaffBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultStaffBoard"
+  /api/console/staff/fields/remove:
+    post:
+      tags: [staff]
+      summary: 删除自定义字段
+      operationId: removeStaffField
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StaffFieldIdCommand"
+      responses:
+        "200":
+          description: StaffBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultStaffBoard"
+  /api/console/staff/template:
+    get:
+      tags: [staff]
+      summary: 下载员工导入模板
+      operationId: downloadStaffTemplate
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: xlsx 二进制
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+  /api/console/staff/import-headers:
+    post:
+      tags: [staff]
+      summary: 读取导入表头
+      operationId: previewStaffHeaders
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: StaffHeadView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultStaffHead"
+  /api/console/staff/import:
+    post:
+      tags: [staff]
+      summary: 导入员工
+      operationId: importStaff
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                importMode:
+                  type: string
+                  enum: [CREATE, UPSERT]
+                mappingJson:
+                  type: string
+      responses:
+        "200":
+          description: StaffImportView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultStaffImport"
+  /api/console/devices:
+    get:
+      tags: [device]
+      summary: 设备管理看板
+      operationId: getDeviceBoard
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: keyword
+          schema: { type: string }
+        - in: query
+          name: pageNo
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, default: 10 }
+        - in: query
+          name: sortKey
+          schema: { type: string }
+        - in: query
+          name: sortDir
+          schema: { type: string, enum: [asc, desc] }
+      responses:
+        "200":
+          description: DeviceBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultDeviceBoard"
+    post:
+      tags: [device]
+      summary: 新增或编辑设备
+      operationId: saveDeviceAsset
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveDeviceAssetCommand"
+      responses:
+        "200":
+          description: DeviceBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultDeviceBoard"
+  /api/console/devices/remove:
+    post:
+      tags: [device]
+      summary: 删除设备
+      operationId: removeDeviceAsset
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceAssetIdCommand"
+      responses:
+        "200":
+          description: DeviceBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultDeviceBoard"
+  /api/console/devices/columns:
+    post:
+      tags: [device]
+      summary: 保存列表可见列
+      operationId: saveDeviceColumns
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveDeviceColumnsCommand"
+      responses:
+        "200":
+          description: DeviceBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultDeviceBoard"
+  /api/console/devices/fields:
+    post:
+      tags: [device]
+      summary: 保存自定义字段
+      operationId: saveDeviceField
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveDeviceFieldCommand"
+      responses:
+        "200":
+          description: DeviceBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultDeviceBoard"
+  /api/console/devices/fields/remove:
+    post:
+      tags: [device]
+      summary: 删除自定义字段
+      operationId: removeDeviceField
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceFieldIdCommand"
+      responses:
+        "200":
+          description: DeviceBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultDeviceBoard"
+  /api/console/devices/sync:
+    post:
+      tags: [device]
+      summary: 按采集盒编码刷新是否联网
+      operationId: syncDeviceBoard
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: DeviceBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultDeviceBoard"
+  /api/console/devices/template:
+    get:
+      tags: [device]
+      summary: 下载设备导入模板
+      operationId: downloadDeviceTemplate
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: xlsx 二进制
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+  /api/console/devices/import-headers:
+    post:
+      tags: [device]
+      summary: 读取导入表头
+      operationId: previewDeviceHeaders
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: DeviceHeadView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultDeviceHead"
+  /api/console/devices/import:
+    post:
+      tags: [device]
+      summary: 导入设备
+      operationId: importDevice
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                importMode:
+                  type: string
+                  enum: [CREATE, UPSERT]
+                mappingJson:
+                  type: string
+      responses:
+        "200":
+          description: DeviceImportView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultDeviceImport"
+  /api/console/perm/roles:
+    get:
+      tags: [perm]
+      summary: 功能角色或数据角色列表（查询即筛选）
+      operationId: getAppRoles
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: kind
+          required: true
+          schema: { type: string, enum: [FUNC, DATA] }
+        - in: query
+          name: appCode
+          schema: { type: string }
+        - in: query
+          name: pageNo
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, default: 5 }
+      responses:
+        "200":
+          description: AppRoleBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultAppRoleBoard"
+    post:
+      tags: [perm]
+      summary: 创建功能角色或数据角色
+      operationId: createAppRole
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveAppRoleCommand"
+      responses:
+        "200":
+          description: AppRoleBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultAppRoleBoard"
+  /api/console/perm/auth:
+    get:
+      tags: [perm]
+      summary: 账号授权列表（查询即按手机号或姓名筛选）
+      operationId: getAppAuth
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: keyword
+          schema: { type: string }
+        - in: query
+          name: pageNo
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, default: 5 }
+      responses:
+        "200":
+          description: AppAuthBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultAppAuthBoard"
+    post:
+      tags: [perm]
+      summary: 保存账号的功能角色或数据角色
+      operationId: saveAppAuth
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveAppAuthCommand"
+      responses:
+        "200":
+          description: AppAuthBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultAppAuthBoard"
+  /api/console/perm/auth/detail:
+    get:
+      tags: [perm]
+      summary: 账号授权详情
+      operationId: getAppAuthDetail
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: userId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: AppAuthDetailView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultAppAuthDetail"
+  /api/console/biz/apps:
+    get:
+      tags: [biz]
+      summary: 工业APP快捷入口（已植入且带入口路径）
+      operationId: getBizApps
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: BizAppBoardView。演示含 EXT_PDM、EXT_PACK_AI
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultBizAppBoard"
+  /api/console/biz/apps/hide:
+    post:
+      tags: [biz]
+      summary: 配置入口隐藏标记
+      operationId: hideBizApps
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveBizAppHideCommand"
+      responses:
+        "200":
+          description: BizAppBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultBizAppBoard"
+  /api/console/biz/apps/admin:
+    post:
+      tags: [biz]
+      summary: 给已植入模块指定管理员
+      operationId: saveBizAppAdmin
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveBizAppAdminCommand"
+      responses:
+        "200":
+          description: BizAppBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultBizAppBoard"
+  /ext/{appCode}:
+    get:
+      tags: [biz]
+      summary: 外接模块同域壳。有 TARGET_URL 则转到内网模块机
+      operationId: getExtModuleShell
+      security: []
+      parameters:
+        - in: path
+          name: appCode
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: HTML 壳
+          content:
+            text/html:
+              schema: { type: string }
+        "404":
+          description: 模块未植入入口
+  /api/console/todo:
+    get:
+      tags: [todo]
+      summary: 待办任务列表（原理未定，当前为空）
+      operationId: getTodo
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: pageNo
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, default: 10 }
+      responses:
+        "200":
+          description: SliceView of TodoItemView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultTodoSlice"
+  /api/console/inbox:
+    get:
+      tags: [inbox]
+      summary: 站内信列表。与工作台消息动态同源，无自动推送
+      operationId: getInbox
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: readFlag
+          schema: { type: string, default: "0", enum: ["0", "1"] }
+        - in: query
+          name: rangeCode
+          schema: { type: string, default: ALL, enum: [ALL, TODAY, 3D, 7D, 30D] }
+        - in: query
+          name: appCode
+          schema: { type: string }
+        - in: query
+          name: pageNo
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, default: 10 }
+      responses:
+        "200":
+          description: InboxBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultInboxBoard"
+  /api/console/inbox/read:
+    post:
+      tags: [inbox]
+      summary: 标记已读
+      operationId: markInboxRead
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InboxIdsCommand"
+      responses:
+        "200":
+          description: InboxBoardView。未选 ids 时 message=请先选择要操作的消息！
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultInboxBoard"
+  /api/console/inbox/remove:
+    post:
+      tags: [inbox]
+      summary: 删除站内信
+      operationId: removeInbox
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InboxIdsCommand"
+      responses:
+        "200":
+          description: InboxBoardView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultInboxBoard"
+  /api/ops/auth/login:
+    post:
+      tags: [ops]
+      summary: 厂商运营登录
+      operationId: opsLogin
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginCommand"
+            example:
+              loginName: ops
+              loginPassword: GooCi@2026
+      responses:
+        "200":
+          description: OpsSessionView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultOpsSession"
+  /api/ops/session:
+    get:
+      tags: [ops]
+      summary: 当前运营账号
+      operationId: opsSession
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OpsSessionView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultOpsSession"
+  /api/ops/site:
+    get:
+      tags: [ops]
+      summary: 读客服电话
+      operationId: getOpsSite
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OpsSiteView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultOpsSite"
+    post:
+      tags: [ops]
+      summary: 保存客服电话
+      operationId: saveOpsSite
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveOpsSiteCommand"
+      responses:
+        "200":
+          description: OpsSiteView
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultOpsSite"
+  /api/ops/enters:
+    get:
+      tags: [ops]
+      summary: 全部企业概览
+      operationId: listOpsEnters
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OpsEnterRowView 数组
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultOpsEnterList"
+  /api/ops/apps:
+    get:
+      tags: [ops]
+      summary: 某企业已植入模块
+      operationId: listOpsApps
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: enterId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OpsAppRowView 数组
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultOpsAppList"
+    post:
+      tags: [ops]
+      summary: 改隐藏与 TARGET_URL
+      operationId: saveOpsApp
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveOpsAppCommand"
+      responses:
+        "200":
+          description: OpsAppRowView 数组
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultOpsAppList"
+  /api/ops/apps/implant:
+    post:
+      tags: [ops]
+      summary: 给某企业植入模块
+      operationId: implantOpsApp
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImplantOpsAppCommand"
+      responses:
+        "200":
+          description: OpsAppRowView 数组
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultOpsAppList"
+  /api/ops/icons:
+    get:
+      tags: [ops]
+      summary: 已植入模块图标一览
+      operationId: listOpsIcons
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OpsIconRowView 数组
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultOpsIconList"
+  /api/ops/changes:
+    get:
+      tags: [ops]
+      summary: 工商/银行待处理申请
+      operationId: listOpsChanges
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OpsChangeRowView 数组
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResultOpsChangeList"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ApiResultVoid:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: integer, example: 1 }
+        message: { type: string }
+        data: { nullable: true }
+    SiteMeta:
+      type: object
+      required: [brandName, servicePhone]
+      properties:
+        brandName: { type: string, example: GOOCI 谷器 }
+        servicePhone: { type: string, description: 空串表示未配置 }
+    ApiResultSiteMeta:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: integer, example: 0 }
+        message: { type: string, example: ok }
+        data:
+          $ref: "#/components/schemas/SiteMeta"
+    LoginCommand:
+      type: object
+      required: [loginName, loginPassword]
+      properties:
+        loginName: { type: string }
+        loginPassword: { type: string }
+    MenuView:
+      type: object
+      properties:
+        id: { type: string }
+        menuCode: { type: string }
+        menuName: { type: string }
+        routePath: { type: string }
+        iconCode:
+          type: string
+          nullable: true
+          enum: [monitor, office, collection, lock, grid]
+        children:
+          type: array
+          items:
+            $ref: "#/components/schemas/MenuView"
+    SessionView:
+      type: object
+      properties:
+        token: { type: string, nullable: true, description: 仅登录接口有值 }
+        userId: { type: string }
+        displayName: { type: string }
+        mobile: { type: string, nullable: true, description: 已脱敏 }
+        roleName: { type: string }
+        enterId: { type: string }
+        enterName: { type: string }
+        regionText: { type: string }
+        certStatus: { type: string, description: "1=已认证" }
+        servicePhone: { type: string }
+        menus:
+          type: array
+          items:
+            $ref: "#/components/schemas/MenuView"
+    ApiResultSession:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/SessionView"
+    ConsoleOverview:
+      type: object
+      properties:
+        unreadMessageCount: { type: integer, example: 0 }
+        pendingTaskCount: { type: integer, example: 0 }
+        linkedDeviceCount: { type: integer, example: 0 }
+        onlineDeviceCount: { type: integer, example: 0 }
+        recentMessages:
+          type: array
+          items:
+            $ref: "#/components/schemas/InboxTickerView"
+    ApiResultOverview:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/ConsoleOverview"
+    AppGrantView:
+      type: object
+      properties:
+        appCode: { type: string }
+        appName: { type: string }
+        funcRoleName: { type: string }
+        dataRoleName: { type: string }
+    ProfileView:
+      type: object
+      properties:
+        displayName: { type: string }
+        mobile: { type: string, nullable: true, description: 明文，不做脱敏 }
+        mailAddr: { type: string, description: 未填为空串 }
+        roleName: { type: string }
+        enterName: { type: string }
+        deptNames:
+          type: array
+          items: { type: string }
+        grants:
+          type: array
+          items:
+            $ref: "#/components/schemas/AppGrantView"
+    ApiResultProfile:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/ProfileView"
+    UpdateNameCommand:
+      type: object
+      required: [displayName]
+      properties:
+        displayName: { type: string }
+    UpdateMailCommand:
+      type: object
+      properties:
+        mailAddr: { type: string, description: 空串表示清空 }
+    UpdatePasswordCommand:
+      type: object
+      required: [oldPassword, newPassword]
+      properties:
+        oldPassword: { type: string }
+        newPassword: { type: string, description: 至少6位 }
+    EnterProfileView:
+      type: object
+      properties:
+        enterId: { type: string }
+        enterName: { type: string }
+        certStatus: { type: string }
+        enterNature: { type: string }
+        foundDate: { type: string }
+        enterScale: { type: string }
+        industryName: { type: string }
+        contactName: { type: string }
+        contactMobile: { type: string }
+        contactPhone: { type: string }
+        contactMail: { type: string }
+        enterIntro: { type: string }
+        provinceName: { type: string }
+        cityName: { type: string }
+        districtName: { type: string }
+        addressText: { type: string }
+    ApiResultEnter:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/EnterProfileView"
+    UpdateEnterCommand:
+      type: object
+      properties:
+        enterName: { type: string }
+        enterNature: { type: string }
+        foundDate: { type: string }
+        enterScale: { type: string }
+        industryName: { type: string }
+        contactName: { type: string }
+        contactMobile: { type: string }
+        contactPhone: { type: string }
+        contactMail: { type: string }
+        enterIntro: { type: string }
+        provinceName: { type: string }
+        cityName: { type: string }
+        districtName: { type: string }
+        addressText: { type: string }
+    StaffRowView:
+      type: object
+      properties:
+        userId: { type: string }
+        mobile: { type: string }
+        displayName: { type: string }
+        mailAddr: { type: string }
+        deptName: { type: string }
+    OrgStructureView:
+      type: object
+      properties:
+        enter:
+          $ref: "#/components/schemas/EnterProfileView"
+        admins:
+          type: array
+          items:
+            $ref: "#/components/schemas/StaffRowView"
+    ApiResultStructure:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/OrgStructureView"
+    PromoteAdminCommand:
+      type: object
+      required: [userId]
+      properties:
+        userId: { type: string }
+    AddStaffCommand:
+      type: object
+      required: [mobile, displayName, smsCode]
+      properties:
+        mobile: { type: string }
+        displayName: { type: string }
+        smsCode: { type: string }
+        mailAddr: { type: string }
+        deptId: { type: string }
+    AssignDeviceCommand:
+      type: object
+      required: [deptId]
+      properties:
+        deptId: { type: string }
+        deviceIds:
+          type: array
+          items: { type: string }
+    AssignMemberCommand:
+      type: object
+      required: [deptId]
+      properties:
+        deptId: { type: string }
+        userIds:
+          type: array
+          items: { type: string }
+    DevicePoolView:
+      type: object
+      properties:
+        pending:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeviceRowView"
+        assigned:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeviceRowView"
+    ApiResultDevicePool:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: integer, example: 0 }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/DevicePoolView"
+    RemoveStaffCommand:
+      type: object
+      required: [userId]
+      properties:
+        userId: { type: string }
+        deptId: { type: string }
+    CertView:
+      type: object
+      properties:
+        registerTime: { type: string }
+        bizPassed: { type: string }
+        bankPassed: { type: string }
+        certEnterName: { type: string }
+    BizChangeView:
+      type: object
+      properties:
+        enterName: { type: string }
+        creditCode: { type: string }
+        licenseType: { type: string }
+        licenseScan: { type: string }
+        legalPerson: { type: string }
+        legalIdFront: { type: string }
+        legalIdBack: { type: string }
+        changeProof: { type: string }
+        bizRemark: { type: string }
+    SaveBizChangeCommand:
+      type: object
+      required: [enterName, creditCode, licenseType, licenseScan, changeProof]
+      properties:
+        enterName: { type: string }
+        creditCode: { type: string }
+        licenseType: { type: string }
+        licenseScan: { type: string }
+        legalPerson: { type: string }
+        legalIdFront: { type: string }
+        legalIdBack: { type: string }
+        changeProof: { type: string }
+        bizRemark: { type: string }
+    BankChangeView:
+      type: object
+      properties:
+        bankName: { type: string }
+        bankProvince: { type: string }
+        bankCity: { type: string }
+        bankBranch: { type: string }
+        bankAccount: { type: string }
+        bankPhone: { type: string }
+        bankRemark: { type: string }
+        servicePhone: { type: string }
+    SaveBankChangeCommand:
+      type: object
+      required: [bankName, bankProvince, bankCity, bankBranch, bankAccount, bankPhone]
+      properties:
+        bankName: { type: string }
+        bankProvince: { type: string }
+        bankCity: { type: string }
+        bankBranch: { type: string }
+        bankAccount: { type: string }
+        bankPhone: { type: string }
+        bankRemark: { type: string }
+    FileSavedView:
+      type: object
+      properties:
+        fileId: { type: string }
+        fileName: { type: string }
+    ApiResultBizChange:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/BizChangeView"
+    ApiResultBankChange:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/BankChangeView"
+    ApiResultFileSaved:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/FileSavedView"
+    ApiResultCert:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/CertView"
+    DeptNodeView:
+      type: object
+      properties:
+        id: { type: string }
+        parentId: { type: string }
+        deptName: { type: string }
+        deptDesc: { type: string }
+        enableFlag: { type: string }
+    DeviceRowView:
+      type: object
+      properties:
+        id: { type: string }
+        deviceSn: { type: string }
+        deviceAlias: { type: string }
+        boxCode: { type: string }
+        brandName: { type: string }
+        modelName: { type: string }
+        appOpenCount: { type: integer }
+    SliceView:
+      type: object
+      properties:
+        total: { type: integer }
+        pageNo: { type: integer }
+        pageSize: { type: integer }
+        records:
+          type: array
+          items: {}
+    DeptBoardView:
+      type: object
+      properties:
+        tree:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeptNodeView"
+        current:
+          $ref: "#/components/schemas/DeptNodeView"
+        parentName: { type: string }
+        devices:
+          $ref: "#/components/schemas/SliceView"
+        members:
+          $ref: "#/components/schemas/SliceView"
+    ApiResultDeptBoard:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/DeptBoardView"
+    SaveDeptCommand:
+      type: object
+      required: [deptName]
+      properties:
+        id: { type: string }
+        deptName: { type: string }
+        parentId: { type: string }
+        deptDesc: { type: string }
+    DeptIdCommand:
+      type: object
+      required: [deptId]
+      properties:
+        deptId: { type: string }
+    SaveDeviceCommand:
+      type: object
+      required: [deptId, deviceSn]
+      properties:
+        deptId: { type: string }
+        deviceSn: { type: string }
+        deviceAlias: { type: string }
+        boxCode: { type: string }
+        brandName: { type: string }
+        modelName: { type: string }
+        appOpenCount: { type: integer }
+    RemoveDeviceCommand:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string }
+    SmsCodeCommand:
+      type: object
+      required: [mobile]
+      properties:
+        mobile: { type: string }
+    SmsCodeView:
+      type: object
+      properties:
+        demoCode: { type: string }
+    ApiResultSms:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/SmsCodeView"
+    RegisterCommand:
+      type: object
+      required: [registerKind, mobile, smsCode, displayName, loginPassword, confirmPassword]
+      properties:
+        registerKind: { type: string, enum: [ENTERPRISE, PERSON] }
+        mobile: { type: string }
+        smsCode: { type: string }
+        displayName: { type: string }
+        loginPassword: { type: string }
+        confirmPassword: { type: string }
+        enterName: { type: string }
+        jobName: { type: string }
+        inviteCode: { type: string }
+        agreed: { type: boolean }
+    ApiResultStaffSlice:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/SliceView"
+    SaveStaffCommand:
+      type: object
+      required: [mobile, displayName]
+      properties:
+        userId: { type: string }
+        mobile: { type: string }
+        displayName: { type: string }
+        loginPassword: { type: string }
+        deptIds:
+          type: array
+          items: { type: string }
+        remarkText: { type: string }
+        mailAddr: { type: string }
+        wechatNo: { type: string }
+        dingNo: { type: string }
+        cardNo: { type: string }
+        extras:
+          type: array
+          items:
+            $ref: "#/components/schemas/StaffExtraView"
+    StaffIdCommand:
+      type: object
+      required: [userId]
+      properties:
+        userId: { type: string }
+    SaveStaffCodeRuleCommand:
+      type: object
+      required: [codeName]
+      properties:
+        codeName: { type: string }
+        parts:
+          type: array
+          items:
+            $ref: "#/components/schemas/StaffCodePartView"
+    SaveStaffColumnsCommand:
+      type: object
+      properties:
+        keys:
+          type: array
+          items: { type: string }
+    SaveStaffFieldCommand:
+      type: object
+      required: [fieldName]
+      properties:
+        fieldId: { type: string }
+        fieldName: { type: string }
+        fieldType: { type: string, enum: [TEXT, NUMBER, DATE] }
+        requiredFlag: { type: string }
+        hintText: { type: string }
+    StaffFieldIdCommand:
+      type: object
+      required: [fieldId]
+      properties:
+        fieldId: { type: string }
+    StaffExtraView:
+      type: object
+      properties:
+        fieldId: { type: string }
+        fieldName: { type: string }
+        fieldValue: { type: string }
+    StaffCodePartView:
+      type: object
+      properties:
+        valueType: { type: string, enum: [FIXED, DATE, SEQ] }
+        partValue: { type: string }
+    StaffCodeRuleView:
+      type: object
+      properties:
+        codeName: { type: string }
+        previewText: { type: string }
+        parts:
+          type: array
+          items:
+            $ref: "#/components/schemas/StaffCodePartView"
+    StaffColumnView:
+      type: object
+      properties:
+        colKey: { type: string }
+        colName: { type: string }
+        visibleFlag: { type: string }
+    StaffFieldView:
+      type: object
+      properties:
+        fieldId: { type: string }
+        fieldCode: { type: string }
+        fieldName: { type: string }
+        fieldType: { type: string }
+        requiredFlag: { type: string }
+        hintText: { type: string }
+        sortNo: { type: integer }
+    StaffItemView:
+      type: object
+      properties:
+        userId: { type: string }
+        staffCode: { type: string }
+        displayName: { type: string }
+        mobile: { type: string }
+        deptName: { type: string }
+        deptIds:
+          type: array
+          items: { type: string }
+        mailAddr: { type: string }
+        remarkText: { type: string }
+        wechatNo: { type: string }
+        dingNo: { type: string }
+        cardNo: { type: string }
+        crtTime: { type: string }
+        extras:
+          type: array
+          items:
+            $ref: "#/components/schemas/StaffExtraView"
+    StaffBoardView:
+      type: object
+      properties:
+        slice:
+          $ref: "#/components/schemas/SliceView"
+        columns:
+          type: array
+          items:
+            $ref: "#/components/schemas/StaffColumnView"
+        fields:
+          type: array
+          items:
+            $ref: "#/components/schemas/StaffFieldView"
+        depts:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeptNodeView"
+        codeRule:
+          $ref: "#/components/schemas/StaffCodeRuleView"
+    StaffHeadView:
+      type: object
+      properties:
+        headers:
+          type: array
+          items: { type: string }
+    StaffImportView:
+      type: object
+      properties:
+        createdCount: { type: integer }
+        updatedCount: { type: integer }
+        skippedCount: { type: integer }
+        failedCount: { type: integer }
+        messages:
+          type: array
+          items: { type: string }
+    ApiResultStaffBoard:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/StaffBoardView"
+    ApiResultStaffCodeRule:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/StaffCodeRuleView"
+    ApiResultStaffHead:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/StaffHeadView"
+    ApiResultStaffImport:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/StaffImportView"
+    SaveDeviceAssetCommand:
+      type: object
+      required: [deviceAlias]
+      properties:
+        id: { type: string }
+        deviceSn: { type: string }
+        deviceAlias: { type: string }
+        deviceType: { type: string }
+        makerName: { type: string }
+        brandName: { type: string }
+        modelName: { type: string }
+        installPlace: { type: string }
+        buyDate: { type: string }
+        deptId: { type: string }
+        deviceStatus: { type: string }
+        deviceLevel: { type: string }
+        ownerUserId: { type: string }
+        remarkText: { type: string }
+        extras:
+          type: array
+          items:
+            type: object
+            properties:
+              fieldId: { type: string }
+              fieldValue: { type: string }
+    DeviceAssetIdCommand:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string }
+    SaveDeviceColumnsCommand:
+      type: object
+      properties:
+        keys:
+          type: array
+          items: { type: string }
+    SaveDeviceFieldCommand:
+      type: object
+      required: [fieldName]
+      properties:
+        fieldId: { type: string }
+        fieldName: { type: string }
+        fieldType: { type: string, enum: [TEXT, NUMBER, DATE] }
+        requiredFlag: { type: string }
+        hintText: { type: string }
+    DeviceFieldIdCommand:
+      type: object
+      required: [fieldId]
+      properties:
+        fieldId: { type: string }
+    DeviceBoardView:
+      type: object
+      properties:
+        slice: { type: object }
+        columns: { type: array, items: { type: object } }
+        fields: { type: array, items: { type: object } }
+        depts: { type: array, items: { type: object } }
+        owners: { type: array, items: { type: object } }
+        deviceTypes: { type: array, items: { type: string } }
+        nextCode: { type: string }
+    DeviceHeadView:
+      type: object
+      properties:
+        headers:
+          type: array
+          items: { type: string }
+    DeviceImportView:
+      type: object
+      properties:
+        createdCount: { type: integer }
+        updatedCount: { type: integer }
+        skippedCount: { type: integer }
+        failedCount: { type: integer }
+        messages:
+          type: array
+          items: { type: string }
+    ApiResultDeviceBoard:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/DeviceBoardView"
+    ApiResultDeviceHead:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/DeviceHeadView"
+    ApiResultDeviceImport:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/DeviceImportView"
+    SaveAppRoleCommand:
+      type: object
+      required: [kind, appCode, roleName]
+      properties:
+        kind: { type: string, enum: [FUNC, DATA] }
+        appCode: { type: string }
+        roleName: { type: string }
+    AppOpenView:
+      type: object
+      properties:
+        appCode: { type: string }
+        appName: { type: string }
+    AppRoleRowView:
+      type: object
+      properties:
+        id: { type: string }
+        appCode: { type: string }
+        appName: { type: string }
+        roleName: { type: string }
+    AppRoleBoardView:
+      type: object
+      properties:
+        apps:
+          type: array
+          items: { $ref: "#/components/schemas/AppOpenView" }
+        slice: { type: object }
+    AppCatalogView:
+      type: object
+      properties:
+        appCode: { type: string }
+        appName: { type: string }
+        funcRoles: { type: array, items: { type: string } }
+        dataRoles: { type: array, items: { type: string } }
+    AppAuthItemView:
+      type: object
+      properties:
+        userId: { type: string }
+        mobile: { type: string }
+        displayName: { type: string }
+        deptName: { type: string }
+        mailAddr: { type: string }
+    AppAuthBoardView:
+      type: object
+      properties:
+        apps:
+          type: array
+          items: { $ref: "#/components/schemas/AppCatalogView" }
+        slice: { type: object }
+    AppAuthDetailView:
+      type: object
+      properties:
+        userId: { type: string }
+        displayName: { type: string }
+        mobile: { type: string }
+        mailAddr: { type: string }
+        roleName: { type: string }
+        deptName: { type: string }
+        grants:
+          type: array
+          items: { $ref: "#/components/schemas/AppGrantView" }
+    AppAuthPickCommand:
+      type: object
+      properties:
+        appCode: { type: string }
+        roleNames: { type: array, items: { type: string } }
+    SaveAppAuthCommand:
+      type: object
+      required: [userId, kind]
+      properties:
+        userId: { type: string }
+        kind: { type: string, enum: [FUNC, DATA] }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AppAuthPickCommand" }
+    ApiResultAppRoleBoard:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/AppRoleBoardView"
+    ApiResultAppAuthBoard:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/AppAuthBoardView"
+    ApiResultAppAuthDetail:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/AppAuthDetailView"
+    BizAppTileView:
+      type: object
+      properties:
+        appCode: { type: string }
+        appName: { type: string }
+        entryPath: { type: string }
+        hideFlag: { type: string, enum: ["0", "1"] }
+    BizAppBoardView:
+      type: object
+      properties:
+        apps:
+          type: array
+          items: { $ref: "#/components/schemas/BizAppTileView" }
+    BizAppHideItem:
+      type: object
+      required: [appCode, hideFlag]
+      properties:
+        appCode: { type: string }
+        hideFlag: { type: string, enum: ["0", "1"] }
+    SaveBizAppHideCommand:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/BizAppHideItem" }
+    SaveBizAppAdminCommand:
+      type: object
+      required: [appCode, userId, roleName]
+      properties:
+        appCode: { type: string }
+        userId: { type: string }
+        roleName: { type: string }
+    ApiResultBizAppBoard:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/BizAppBoardView"
+    TodoItemView:
+      type: object
+      properties:
+        id: { type: string }
+        bizLine: { type: string }
+        taskType: { type: string }
+        content: { type: string }
+        senderName: { type: string }
+        handlePath: { type: string }
+        statusFlag: { type: string, enum: ["0", "1"] }
+    TodoSliceView:
+      type: object
+      properties:
+        total: { type: integer }
+        pageNo: { type: integer }
+        pageSize: { type: integer }
+        records:
+          type: array
+          items: { $ref: "#/components/schemas/TodoItemView" }
+    ApiResultTodoSlice:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/TodoSliceView"
+    InboxTickerView:
+      type: object
+      properties:
+        id: { type: string }
+        content: { type: string }
+    InboxItemView:
+      type: object
+      properties:
+        id: { type: string }
+        content: { type: string }
+        sendTime: { type: string }
+        readFlag: { type: string, enum: ["0", "1"] }
+        publisher: { type: string }
+        appCode: { type: string }
+        appName: { type: string }
+    InboxBoardView:
+      type: object
+      properties:
+        apps:
+          type: array
+          items: { $ref: "#/components/schemas/AppOpenView" }
+        slice:
+          type: object
+          properties:
+            total: { type: integer }
+            pageNo: { type: integer }
+            pageSize: { type: integer }
+            records:
+              type: array
+              items: { $ref: "#/components/schemas/InboxItemView" }
+    InboxIdsCommand:
+      type: object
+      required: [ids]
+      properties:
+        ids:
+          type: array
+          items: { type: string }
+    ApiResultInboxBoard:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/InboxBoardView"
+    OpsSessionView:
+      type: object
+      properties:
+        token: { type: string }
+        userId: { type: string }
+        displayName: { type: string }
+        scope: { type: string, example: ops }
+    ApiResultOpsSession:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/OpsSessionView"
+    OpsSiteView:
+      type: object
+      properties:
+        servicePhone: { type: string }
+        brandName: { type: string }
+    SaveOpsSiteCommand:
+      type: object
+      properties:
+        servicePhone: { type: string }
+    ApiResultOpsSite:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          $ref: "#/components/schemas/OpsSiteView"
+    OpsEnterRowView:
+      type: object
+      properties:
+        id: { type: string }
+        enterCode: { type: string }
+        enterName: { type: string }
+        certStatus: { type: string }
+        regionText: { type: string }
+        appCount: { type: integer }
+        visibleAppCount: { type: integer }
+    ApiResultOpsEnterList:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/OpsEnterRowView" }
+    OpsAppRowView:
+      type: object
+      properties:
+        appCode: { type: string }
+        appName: { type: string }
+        hideFlag: { type: string }
+        entryPath: { type: string }
+        targetUrl: { type: string }
+        health: { type: string, enum: [up, down, none] }
+        healthHint: { type: string }
+    SaveOpsAppCommand:
+      type: object
+      required: [enterId, appCode]
+      properties:
+        enterId: { type: string }
+        appCode: { type: string }
+        hideFlag: { type: string }
+        targetUrl: { type: string }
+    ImplantOpsAppCommand:
+      type: object
+      required: [enterId, appCode, appName]
+      properties:
+        enterId: { type: string }
+        appCode: { type: string }
+        appName: { type: string }
+        entryPath: { type: string }
+        targetUrl: { type: string }
+    ApiResultOpsAppList:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/OpsAppRowView" }
+    OpsIconRowView:
+      type: object
+      properties:
+        appCode: { type: string }
+        appName: { type: string }
+    ApiResultOpsIconList:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/OpsIconRowView" }
+    OpsChangeRowView:
+      type: object
+      properties:
+        enterId: { type: string }
+        enterName: { type: string }
+        kind: { type: string }
+        remark: { type: string }
+    ApiResultOpsChangeList:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/OpsChangeRowView" }
+
+

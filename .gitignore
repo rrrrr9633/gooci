@@ -1,0 +1,18 @@
+# 本地开发依赖
+.idea/
+*.iml
+.vscode/
+.DS_Store
+target/
+node_modules/
+dist/
+.mvn/
+.m2/
+.npm-cache
+logs/
+*.log
+frontend/dist/
+backend/target/
+backend/data/
+.env
+.DS_Store
