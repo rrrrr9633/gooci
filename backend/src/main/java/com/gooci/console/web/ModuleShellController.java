@@ -37,7 +37,9 @@ import java.util.regex.Pattern;
 public class ModuleShellController {
 
     private static final Set<String> SKIP_OUT = Set.of(
-            "transfer-encoding", "connection", "content-length", "x-frame-options", "content-security-policy");
+            "transfer-encoding", "connection", "content-length", "x-frame-options", "content-security-policy",
+            "content-security-policy-report-only", "cross-origin-opener-policy", "cross-origin-embedder-policy",
+            "cross-origin-resource-policy");
 
     private final AppOpenMapper appOpenMapper;
     private final HttpClient httpClient;
@@ -233,19 +235,30 @@ public class ModuleShellController {
         String type = contentType.toLowerCase(Locale.ROOT);
         String text = new String(body, StandardCharsets.UTF_8);
         if (type.contains("text/html")) {
-            text = injectHook(prefix, text);
             text = rewriteHtmlAttrs(prefix, text);
             text = rewriteCssUrls(prefix, text);
             text = rewriteAssetPaths(prefix, text);
+            text = rewriteQuotedVitePaths(prefix, text);
+            text = injectHook(prefix, text);
         } else if (type.contains("css")) {
             text = rewriteCssUrls(prefix, text);
         } else {
-            text = rewriteAssetPaths(prefix, text);
+            text = rewriteQuotedVitePaths(prefix, text);
         }
         return text.getBytes(StandardCharsets.UTF_8);
     }
 
     private String injectHook(String prefix, String html) {
+        String map = "<script type=\"importmap\">{\"imports\":{"
+                + "\"/src/\":\"" + prefix + "/src/\","
+                + "\"/@vite/\":\"" + prefix + "/@vite/\","
+                + "\"/@react-refresh\":\"" + prefix + "/@react-refresh\","
+                + "\"/@fs/\":\"" + prefix + "/@fs/\","
+                + "\"/@id/\":\"" + prefix + "/@id/\","
+                + "\"/node_modules/\":\"" + prefix + "/node_modules/\","
+                + "\"/assets/\":\"" + prefix + "/assets/\","
+                + "\"/static/\":\"" + prefix + "/static/\""
+                + "}}</script>";
         String hook = "<script>(function(){var p='" + prefix
                 + "';function same(u){try{return new URL(u,location.href).origin===location.origin;}catch(e){return false;}}"
                 + "function fix(u){if(typeof u!=='string'||!u)return u;"
@@ -256,17 +269,25 @@ public class ModuleShellController {
                 + "else if(i&&i.url)i=new Request(fix(i.url),i);return f.call(this,i,n);};"
                 + "var o=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u){"
                 + "arguments[1]=fix(u);return o.apply(this,arguments);};"
+                + "var sa=Element.prototype.setAttribute;Element.prototype.setAttribute=function(n,v){"
+                + "if((n==='src'||n==='href')&&typeof v==='string')v=fix(v);return sa.call(this,n,v);};"
+                + "function patch(proto,prop){var d=Object.getOwnPropertyDescriptor(proto,prop);if(!d||!d.set)return;"
+                + "Object.defineProperty(proto,prop,{configurable:true,enumerable:d.enumerable,get:d.get,set:function(v){d.set.call(this,fix(v));}});}"
+                + "if(window.HTMLScriptElement)patch(HTMLScriptElement.prototype,'src');"
+                + "if(window.HTMLLinkElement)patch(HTMLLinkElement.prototype,'href');"
+                + "if(window.HTMLIFrameElement)patch(HTMLIFrameElement.prototype,'src');"
                 + "if(window.WebSocket){var W=window.WebSocket;window.WebSocket=function(u,r){"
                 + "if(typeof u==='string'){try{var x=new URL(u,location.href);"
                 + "if(same(u)&&x.pathname.indexOf(p)!==0){"
                 + "u=(location.protocol==='https:'?'wss:':'ws:')+'//'+location.host+p+x.pathname+x.search;}"
                 + "}catch(e){}}return r===undefined?new W(u):new W(u,r);};window.WebSocket.prototype=W.prototype;}"
                 + "})();</script>";
+        String inject = map + hook;
         Matcher head = Pattern.compile("(?i)<head[^>]*>").matcher(html);
         if (head.find()) {
-            return html.substring(0, head.end()) + hook + html.substring(head.end());
+            return html.substring(0, head.end()) + inject + html.substring(head.end());
         }
-        return hook + html;
+        return inject + html;
     }
 
     private String rewriteHtmlAttrs(String prefix, String html) {
@@ -287,16 +308,32 @@ public class ModuleShellController {
         return path.matcher(text).replaceAll(Matcher.quoteReplacement(prefix) + "$1");
     }
 
+    private String rewriteQuotedVitePaths(String prefix, String text) {
+        Pattern quoted = Pattern.compile(
+                "(['\"])(/(?:@vite|@react-refresh|@fs|@id|src/|node_modules/|assets/|static/)[^'\"]*)\\1");
+        Matcher matcher = quoted.matcher(text);
+        StringBuffer out = new StringBuffer();
+        while (matcher.find()) {
+            String path = matcher.group(2);
+            String next = path.startsWith(prefix + "/") || path.equals(prefix)
+                    ? matcher.group(0)
+                    : matcher.group(1) + prefix + path + matcher.group(1);
+            matcher.appendReplacement(out, Matcher.quoteReplacement(next));
+        }
+        matcher.appendTail(out);
+        return out.toString();
+    }
+
     private boolean needRewrite(String contentType) {
         if (contentType == null) {
             return false;
         }
         String type = contentType.toLowerCase(Locale.ROOT);
         return type.contains("text/html")
+                || type.contains("text/css")
                 || type.contains("javascript")
                 || type.contains("ecmascript")
-                || type.contains("typescript")
-                || type.contains("text/css");
+                || type.contains("typescript");
     }
 
     private String shellPrefix(String appCode) {

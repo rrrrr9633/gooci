@@ -22,8 +22,8 @@ public final class ExtTargetSupport {
 
     public static final Set<String> SKIP_REQUEST_HEADERS = Set.of(
             "host", "content-length", "connection", "accept-encoding", "cookie", "authorization",
-            "keep-alive", "te", "trailer", "upgrade", "transfer-encoding", "proxy-connection",
-            "expect", "http2-settings");
+            "origin", "referer", "keep-alive", "te", "trailer", "upgrade", "transfer-encoding",
+            "proxy-connection", "expect", "http2-settings");
 
     private ExtTargetSupport() {
     }

@@ -15,4 +15,7 @@ frontend/dist/
 backend/target/
 backend/data/
 .env
+.env.local
+.env.production
+.local-dev-backup/
 .DS_Store

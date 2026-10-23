@@ -84,8 +84,8 @@ public class KernelDataSeed implements ApplicationRunner {
             StaffCodeRuleMapper staffCodeRuleMapper,
             OpsUserMapper opsUserMapper,
             PasswordEncoder passwordEncoder,
-            @Value("${gooci.ext-pdm-url:http://127.0.0.1:5174}") String extPdmUrl,
-            @Value("${gooci.ext-pack-url:http://127.0.0.1:8777}") String extPackUrl) {
+            @Value("${gooci.ext-pdm-url:}") String extPdmUrl,
+            @Value("${gooci.ext-pack-url:}") String extPackUrl) {
         this.enterRecordMapper = enterRecordMapper;
         this.sysUserMapper = sysUserMapper;
         this.sysMenuMapper = sysMenuMapper;

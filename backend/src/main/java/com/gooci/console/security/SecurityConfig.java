@@ -3,6 +3,7 @@ package com.gooci.console.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gooci.console.common.ApiResult;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -19,6 +20,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -63,9 +65,19 @@ public class SecurityConfig {
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource(
+            @Value("${gooci.cors-origins}") String corsOrigins) {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://127.0.0.1:5173", "http://localhost:5173"));
+        List<String> origins = new ArrayList<>();
+        if (corsOrigins != null) {
+            for (String item : corsOrigins.split(",")) {
+                String origin = item.trim();
+                if (!origin.isBlank()) {
+                    origins.add(origin);
+                }
+            }
+        }
+        configuration.setAllowedOrigins(origins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
