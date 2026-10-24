@@ -1,11 +1,11 @@
 server:
-  port: ${GOOCI_SERVER_PORT:8080}
+  port: 8080
 
 spring:
   application:
     name: gooci-console
   profiles:
-    default: prod
+    default: local
   jackson:
     time-zone: Asia/Shanghai
   servlet:
@@ -24,13 +24,9 @@ mybatis-plus:
       logic-not-delete-value: "0"
 
 gooci:
-  public-domain: ${GOOCI_PUBLIC_DOMAIN:goocidata.top}
-  public-ip: ${GOOCI_PUBLIC_IP:154.201.65.68}
-  public-origin: ${GOOCI_PUBLIC_ORIGIN:https://goocidata.top}
-  cors-origins: ${GOOCI_CORS_ORIGINS:https://goocidata.top,https://www.goocidata.top,http://goocidata.top,http://www.goocidata.top,http://154.201.65.68}
-  jwt-secret: ${GOOCI_JWT_SECRET:gooci-console-dev-secret-change-before-release-2026}
-  jwt-expire-hours: ${GOOCI_JWT_EXPIRE_HOURS:12}
-  service-phone: ${GOOCI_SERVICE_PHONE:}
-  ext-demo-url: ${GOOCI_EXT_DEMO_URL:}
-  ext-pdm-url: ${GOOCI_EXT_PDM_URL:}
-  ext-pack-url: ${GOOCI_EXT_PACK_URL:}
+  jwt-secret: gooci-console-dev-secret-change-before-release-2026
+  jwt-expire-hours: 12
+  service-phone: ""
+  ext-demo-url: http://127.0.0.1:8091
+  ext-pdm-url: http://127.0.0.1:5174
+  ext-pack-url: http://127.0.0.1:8777
