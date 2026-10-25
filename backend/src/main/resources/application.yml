@@ -28,5 +28,6 @@ gooci:
   jwt-expire-hours: 12
   service-phone: ""
   ext-demo-url: http://127.0.0.1:8091
-  ext-pdm-url: http://127.0.0.1:5174
-  ext-pack-url: http://127.0.0.1:8777
+  ext-pdm-url: ""
+  ext-pack-url: ""
+  seed-demo-modules: false

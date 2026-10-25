@@ -68,6 +68,7 @@ public class KernelDataSeed implements ApplicationRunner {
     private final PasswordEncoder passwordEncoder;
     private final String extPdmUrl;
     private final String extPackUrl;
+    private final boolean seedDemoModules;
 
     public KernelDataSeed(
             EnterRecordMapper enterRecordMapper,
@@ -84,8 +85,9 @@ public class KernelDataSeed implements ApplicationRunner {
             StaffCodeRuleMapper staffCodeRuleMapper,
             OpsUserMapper opsUserMapper,
             PasswordEncoder passwordEncoder,
-            @Value("${gooci.ext-pdm-url:http://127.0.0.1:5174}") String extPdmUrl,
-            @Value("${gooci.ext-pack-url:http://127.0.0.1:8777}") String extPackUrl) {
+            @Value("${gooci.ext-pdm-url:}") String extPdmUrl,
+            @Value("${gooci.ext-pack-url:}") String extPackUrl,
+            @Value("${gooci.seed-demo-modules:false}") boolean seedDemoModules) {
         this.enterRecordMapper = enterRecordMapper;
         this.sysUserMapper = sysUserMapper;
         this.sysMenuMapper = sysMenuMapper;
@@ -102,6 +104,7 @@ public class KernelDataSeed implements ApplicationRunner {
         this.passwordEncoder = passwordEncoder;
         this.extPdmUrl = extPdmUrl;
         this.extPackUrl = extPackUrl;
+        this.seedDemoModules = seedDemoModules;
     }
 
     @Override
@@ -112,10 +115,11 @@ public class KernelDataSeed implements ApplicationRunner {
         ensureParameter();
         ensureDepts(enterId, userId);
         ensureAppCatalog(enterId, userId);
-        ensureAppGrants(enterId, userId);
+        if (seedDemoModules) {
+            seedDemoModules(enterId, userId);
+        }
         ensureOrgDemo(enterId, userId);
         ensureStaffDemo(enterId, userId);
-        ensureDemoAuth(enterId);
         ensureOpsUser();
     }
 
@@ -276,6 +280,9 @@ public class KernelDataSeed implements ApplicationRunner {
         retireOpenApp(enterId, "DEVICE_EYE");
         retireOpenApp(enterId, "APP_STEWARD");
         retireOpenApp(enterId, "DEMO_SHELL");
+    }
+
+    private void seedDemoModules(String enterId, String userId) {
         ensureOpenApp(enterId, userId, "EXT_PDM", "设备故障预测", 30, "/workbench/ext/EXT_PDM", extPdmUrl);
         ensureOpenApp(enterId, userId, "EXT_PACK_AI", "礼盒包装AI", 40, "/workbench/ext/EXT_PACK_AI", extPackUrl);
         ensureAppRole(enterId, userId, "EXT_PDM", "FUNC", "超级管理员", 10);
@@ -284,6 +291,8 @@ public class KernelDataSeed implements ApplicationRunner {
         String dataRole = enter == null || enter.getEnterName() == null ? "谷器演示工厂" : enter.getEnterName();
         ensureAppRole(enterId, userId, "EXT_PDM", "DATA", dataRole, 10);
         ensureAppRole(enterId, userId, "EXT_PACK_AI", "DATA", dataRole, 10);
+        ensureAppGrants(enterId, userId);
+        ensureDemoAuth(enterId);
     }
 
     private void ensureOpenApp(String enterId, String userId, String code, String name, int sortNo, String entryPath, String targetUrl) {

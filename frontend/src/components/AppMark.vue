@@ -53,6 +53,32 @@
       </g>
     </g>
 
+    <!-- CAD 拆解：折线图纸与圆形定位点 -->
+    <g v-else-if="kind === 'cad'">
+      <path :d="hex" :fill="url('plate')" />
+      <path :d="hexInner" fill="none" stroke="#fff" stroke-opacity="0.38" stroke-width="1.6" />
+      <path :d="hex" :fill="url('sheen')" />
+      <g :filter="flt('soft')" fill="none" :stroke="url('ink')" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M25 58 L25 31 L43 21 L63 32 L63 58 L44 68 Z" stroke-width="2.4" />
+        <path d="M25 31 L44 42 L63 32 M44 42 V68" stroke-width="2" stroke-opacity="0.8" />
+        <circle cx="44" cy="42" r="4" stroke-width="2" />
+        <path d="M19 62 H31 M57 62 H69" stroke-width="1.8" />
+      </g>
+    </g>
+
+    <!-- 周计划：手绘日历与周节拍 -->
+    <g v-else-if="kind === 'week'">
+      <path :d="hex" :fill="url('plate')" />
+      <path :d="hexInner" fill="none" stroke="#fff" stroke-opacity="0.38" stroke-width="1.6" />
+      <path :d="hex" :fill="url('sheen')" />
+      <g :filter="flt('soft')" fill="none" :stroke="url('ink')" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="24" y="25" width="40" height="38" rx="4" stroke-width="2.4" />
+        <path d="M24 37 H64 M33 20 V30 M55 20 V30" stroke-width="2.6" />
+        <path d="M31 46 H37 M43 46 H49 M55 46 H59 M31 54 H37 M43 54 H49" stroke-width="2.4" />
+        <path d="M31 60 H57" stroke-width="1.5" stroke-opacity="0.7" />
+      </g>
+    </g>
+
     <!-- 未登记模块：六边形底板 + 三节点，不用汉字 -->
     <g v-else>
       <path :d="hex" :fill="url('plate')" />
@@ -80,6 +106,8 @@ const kind = computed(() => {
   const code = (props.code || '').trim()
   if (code === 'EXT_PDM') return 'pdm'
   if (code === 'EXT_PACK_AI') return 'pack'
+  if (code === 'EXT_CAD') return 'cad'
+  if (code === 'EXT_WEEK') return 'week'
   return 'mesh'
 })
 

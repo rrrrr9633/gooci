@@ -15,3 +15,8 @@ spring:
       schema-locations: classpath:db/schema.sql,classpath:db/schema-patch.sql
       encoding: UTF-8
       continue-on-error: true
+
+gooci:
+  ext-pdm-url: http://127.0.0.1:5174
+  ext-pack-url: http://127.0.0.1:8777
+  seed-demo-modules: true
