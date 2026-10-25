@@ -20,7 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
  */
 public interface StaffService {
 
-    StaffBoardView loadBoard(String keyword, long pageNo, long pageSize);
+    StaffBoardView loadBoard(String keyword, String deptId, long pageNo, long pageSize);
 
     StaffBoardView saveStaff(SaveStaffCommand command);
 

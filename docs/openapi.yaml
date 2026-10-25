@@ -722,6 +722,9 @@ paths:
           name: keyword
           schema: { type: string }
         - in: query
+          name: deptId
+          schema: { type: string }
+        - in: query
           name: pageNo
           schema: { type: integer, default: 1 }
         - in: query

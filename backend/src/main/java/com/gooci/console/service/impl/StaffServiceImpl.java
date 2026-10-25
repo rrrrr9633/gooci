@@ -100,17 +100,29 @@ public class StaffServiceImpl implements StaffService {
     }
 
     @Override
-    public StaffBoardView loadBoard(String keyword, long pageNo, long pageSize) {
+    public StaffBoardView loadBoard(String keyword, String deptId, long pageNo, long pageSize) {
         String enterId = requireEnterId();
         List<StaffField> fields = listFields(enterId);
         List<SysUser> users = sysUserMapper.selectList(new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getTsEnterId, enterId)
                 .orderByDesc(SysUser::getStaffCode)
                 .orderByDesc(SysUser::getCrtTime));
+        Set<String> inDept = null;
+        if (deptId != null && !deptId.isBlank()) {
+            List<UserDeptRel> rels = userDeptRelMapper.selectList(new LambdaQueryWrapper<UserDeptRel>()
+                    .eq(UserDeptRel::getTmDeptId, deptId.trim()));
+            inDept = new HashSet<>();
+            for (UserDeptRel rel : rels) {
+                inDept.add(rel.getTmSysUserId());
+            }
+        }
         String key = keyword == null ? "" : keyword.trim();
         List<StaffItemView> mapped = new ArrayList<>();
         for (SysUser user : users) {
             if (!matchUser(user, key)) {
+                continue;
+            }
+            if (inDept != null && !inDept.contains(user.getId())) {
                 continue;
             }
             mapped.add(toItem(enterId, user, fields));
@@ -161,7 +173,7 @@ public class StaffServiceImpl implements StaffService {
         }
         replaceDepts(enterId, user.getId(), command.getDeptIds());
         replaceExtras(enterId, user.getId(), command.getExtras());
-        return loadBoard(null, 1, 10);
+        return loadBoard(null, null, 1, 10);
     }
 
     @Override
@@ -184,7 +196,7 @@ public class StaffServiceImpl implements StaffService {
         userDeptRelMapper.delete(new LambdaQueryWrapper<UserDeptRel>().eq(UserDeptRel::getTmSysUserId, user.getId()));
         staffFieldValMapper.delete(new LambdaQueryWrapper<StaffFieldVal>().eq(StaffFieldVal::getTmSysUserId, user.getId()));
         sysUserMapper.deleteById(user.getId());
-        return loadBoard(null, 1, 10);
+        return loadBoard(null, null, 1, 10);
     }
 
     @Override
@@ -207,7 +219,7 @@ public class StaffServiceImpl implements StaffService {
         List<String> keys = command.getKeys() == null ? List.of() : command.getKeys();
         rule.setColJson(writeJson(keys));
         staffCodeRuleMapper.updateById(rule);
-        return loadBoard(null, 1, 10);
+        return loadBoard(null, null, 1, 10);
     }
 
     @Override
@@ -241,7 +253,7 @@ public class StaffServiceImpl implements StaffService {
             field.setHintText(trimToNull(command.getHintText()));
             staffFieldMapper.updateById(field);
         }
-        return loadBoard(null, 1, 10);
+        return loadBoard(null, null, 1, 10);
     }
 
     @Override
@@ -252,7 +264,7 @@ public class StaffServiceImpl implements StaffService {
         staffFieldValMapper.delete(new LambdaQueryWrapper<StaffFieldVal>()
                 .eq(StaffFieldVal::getTmStaffFieldId, field.getId()));
         staffFieldMapper.deleteById(field.getId());
-        return loadBoard(null, 1, 10);
+        return loadBoard(null, null, 1, 10);
     }
 
     @Override

@@ -162,7 +162,7 @@ async function searchStaff() {
 }
 
 async function loadStaff(pageNo) {
-  staffSlice.value = await http.get('/console/org/staff', {
+  const board = await http.get('/console/staff', {
     params: {
       deptId: query.deptId || undefined,
       keyword: query.keyword || undefined,
@@ -170,6 +170,7 @@ async function loadStaff(pageNo) {
       pageSize: 5
     }
   })
+  staffSlice.value = board.slice || { records: [], total: 0, pageNo, pageSize: 5 }
 }
 
 async function saveAdmin() {

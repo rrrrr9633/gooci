@@ -46,9 +46,10 @@ public class StaffController {
     @GetMapping
     public ApiResult<StaffBoardView> board(
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String deptId,
             @RequestParam(defaultValue = "1") long pageNo,
             @RequestParam(defaultValue = "10") long pageSize) {
-        return ApiResult.ok(staffService.loadBoard(keyword, pageNo, pageSize));
+        return ApiResult.ok(staffService.loadBoard(keyword, deptId, pageNo, pageSize));
     }
 
     @PostMapping
