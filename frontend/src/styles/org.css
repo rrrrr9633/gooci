@@ -844,7 +844,13 @@
   filter: drop-shadow(0 14px 18px #14afe752);
 }
 .org-app-mark:disabled { cursor: default; }
-.org-app-name { font-size: 13px; color: var(--gooci-text); }
+.org-app-name {
+  font-size: 13px;
+  color: var(--gooci-text);
+  text-align: center;
+  line-height: 1.35;
+  max-width: 10em;
+}
 .org-app-hide {
   display: flex;
   align-items: center;

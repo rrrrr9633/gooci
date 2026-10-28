@@ -44,6 +44,7 @@ const router = createRouter({
         { path: 'biz/app', name: 'bizApp', component: () => import('../views/workbench/IndustrialAppPage.vue'), meta: { title: '工业APP', auth: true } },
         { path: 'biz/todo', name: 'bizTodo', component: () => import('../views/workbench/TodoPage.vue'), meta: { title: '待办任务', auth: true } },
         { path: 'biz/inbox', name: 'bizInbox', component: () => import('../views/workbench/InboxPage.vue'), meta: { title: '站内信', auth: true } },
+        { path: 'app/:appCode', name: 'appShell', component: () => import('../views/workbench/PlaceholderPage.vue'), meta: { title: '模块', auth: true } },
         { path: 'ext/:appCode', name: 'extModule', component: () => import('../views/workbench/ExtModulePage.vue'), meta: { title: '外接模块', auth: true } }
       ]
     },

@@ -92,6 +92,11 @@ onMounted(async () => {
   color: var(--gooci-text);
   font-size: 13px;
 }
+.home-app span {
+  text-align: center;
+  line-height: 1.35;
+  max-width: 9.5em;
+}
 .home-app :deep(.app-mark) {
   filter: drop-shadow(0 8px 12px #14afe740);
 }
