@@ -8,7 +8,7 @@
     </div>
     <div v-if="apps.length" class="home-apps">
       <button v-for="app in apps" :key="app.appCode" class="home-app" type="button" @click="openApp(app)">
-        <AppMark :code="app.appCode" size="sm" />
+        <AppMark :code="app.appCode" :name="app.appName" size="sm" />
         <span>{{ app.appName }}</span>
       </button>
     </div>

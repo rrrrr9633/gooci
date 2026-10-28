@@ -25,7 +25,6 @@
       </filter>
     </defs>
 
-    <!-- 礼盒包装：圆角方标 + 等轴礼盒 -->
     <g v-if="kind === 'pack'">
       <rect x="8" y="8" width="72" height="72" rx="20" :fill="url('plate')" />
       <rect x="14" y="14" width="60" height="60" rx="16" fill="none" stroke="#fff" stroke-opacity="0.32" stroke-width="1.5" />
@@ -36,7 +35,6 @@
         <path d="M28 42 L44 34 L60 42 L44 50 Z" fill="#fff" fill-opacity="0.95" />
         <path d="M44 34 V68" fill="none" stroke="#1a7eab" stroke-opacity="0.45" stroke-width="2" />
         <path d="M36 31 C36 26 41 24 44 28 C47 24 52 26 52 31 C49 30 46 33 44 36 C42 33 39 30 36 31 Z" fill="#fff" />
-        <path d="M41 28 L47 28" fill="none" stroke="#7ad4f0" stroke-width="1.2" />
       </g>
     </g>
 
@@ -44,145 +42,118 @@
       <path :d="hex" :fill="url('plate')" />
       <path :d="hexInner" fill="none" stroke="#fff" stroke-opacity="0.38" stroke-width="1.6" />
       <path :d="hex" :fill="url('sheen')" />
-      <g :filter="flt('soft')" fill="none" :stroke="url('ink')" stroke-linecap="round" stroke-linejoin="round">
-        <!-- 设备故障预测 -->
-        <g v-if="kind === 'pdm'">
-          <circle cx="44" cy="30" r="5.2" stroke-width="2.2" />
-          <path d="M44 35.4 V42" stroke-width="2.2" />
-          <path d="M18 54 H30 L35.5 42 L41 62 L47.5 36 L54 54 H70" stroke-width="2.6" />
-          <circle cx="44" cy="30" r="1.7" fill="#fff" stroke="none" />
+      <g :filter="flt('soft')" :fill="url('ink')" :stroke="url('ink')" stroke-linecap="round" stroke-linejoin="round">
+        <g v-if="kind === 'pdm'" fill="none">
+          <circle cx="44" cy="30" r="5.2" stroke-width="2.4" />
+          <path d="M44 35.4 V42" stroke-width="2.4" />
+          <path d="M18 54 H30 L35.5 42 L41 62 L47.5 36 L54 54 H70" stroke-width="2.8" />
+          <circle cx="44" cy="30" r="1.8" stroke="none" />
         </g>
-        <!-- CAD 拆解 -->
-        <g v-else-if="kind === 'cad'">
-          <path d="M25 58 L25 31 L43 21 L63 32 L63 58 L44 68 Z" stroke-width="2.4" />
-          <path d="M25 31 L44 42 L63 32 M44 42 V68" stroke-width="2" stroke-opacity="0.8" />
-          <circle cx="44" cy="42" r="4" stroke-width="2" />
-          <path d="M19 62 H31 M57 62 H69" stroke-width="1.8" />
+        <g v-else-if="kind === 'cad'" fill="none">
+          <path d="M25 58 L25 31 L43 21 L63 32 L63 58 L44 68 Z" stroke-width="2.5" />
+          <path d="M25 31 L44 42 L63 32 M44 42 V68" stroke-width="2.1" />
+          <circle cx="44" cy="42" r="4" stroke-width="2.1" />
         </g>
-        <!-- 周计划 -->
-        <g v-else-if="kind === 'week'">
-          <rect x="24" y="25" width="40" height="38" rx="4" stroke-width="2.4" />
+        <g v-else-if="kind === 'week'" fill="none">
+          <rect x="24" y="25" width="40" height="38" rx="4" stroke-width="2.5" />
           <path d="M24 37 H64 M33 20 V30 M55 20 V30" stroke-width="2.6" />
-          <path d="M31 46 H37 M43 46 H49 M55 46 H59 M31 54 H37 M43 54 H49" stroke-width="2.4" />
-          <path d="M31 60 H57" stroke-width="1.5" stroke-opacity="0.7" />
+          <path d="M31 46 H37 M43 46 H49 M55 46 H59 M31 54 H37 M43 54 H49" stroke-width="2.6" />
         </g>
-        <!-- 售后管理：耳机 -->
-        <g v-else-if="kind === 'after'">
-          <path d="M26 46 V40 C26 30 34 23 44 23 C54 23 62 30 62 40 V46" stroke-width="2.6" />
-          <rect x="22" y="44" width="10" height="16" rx="4" stroke-width="2.2" />
-          <rect x="56" y="44" width="10" height="16" rx="4" stroke-width="2.2" />
-          <path d="M62 56 H68 V50" stroke-width="2.2" />
+        <g v-else-if="kind === 'after'" fill="none">
+          <path d="M27 46 V39 C27 29 34.5 22 44 22 C53.5 22 61 29 61 39 V46" stroke-width="3" />
+          <rect x="21" y="43" width="12" height="18" rx="5" stroke-width="2.6" />
+          <rect x="55" y="43" width="12" height="18" rx="5" stroke-width="2.6" />
+          <path d="M61 58 C66 58 70 54 70 49" stroke-width="2.6" />
         </g>
-        <!-- 轻工单：工单夹 -->
         <g v-else-if="kind === 'work'">
-          <rect x="27" y="24" width="34" height="42" rx="4" stroke-width="2.4" />
-          <path d="M34 22 H54 V28 H34 Z" stroke-width="2.2" />
-          <path d="M34 40 H54 M34 48 H50 M34 56 H46" stroke-width="2.2" />
+          <path d="M30 28 H58 L58 68 H30 Z" stroke="none" />
+          <path d="M36 22 H52 L54 30 H34 Z" stroke="none" />
+          <path d="M36 42 H52 M36 50 H48 M36 58 H44" fill="none" stroke="#0d6f96" stroke-width="2.4" />
         </g>
-        <!-- 设备监控平台：屏幕波形 -->
         <g v-else-if="kind === 'monitor'">
-          <rect x="22" y="24" width="44" height="30" rx="4" stroke-width="2.4" />
-          <path d="M36 62 H52 M44 54 V62" stroke-width="2.4" />
-          <path d="M28 40 H36 L40 32 L46 46 L50 38 H60" stroke-width="2.4" />
+          <path d="M20 24 H68 V52 H20 Z" stroke="none" />
+          <path d="M36 56 H52 L56 66 H32 Z" stroke="none" />
+          <path d="M28 38 H36 L40 30 L46 44 L52 34 H62" fill="none" stroke="#0d6f96" stroke-width="2.6" />
         </g>
-        <!-- 轻仓储：货箱堆叠 -->
         <g v-else-if="kind === 'wms'">
-          <path d="M30 36 L44 28 L58 36 L44 44 Z" stroke-width="2.2" />
-          <path d="M30 36 V52 L44 60 V44 M58 36 V52 L44 60" stroke-width="2.2" />
-          <path d="M26 58 H62" stroke-width="2.4" />
+          <path d="M24 58 H64 V66 H24 Z" stroke="none" />
+          <path d="M28 36 L44 26 L60 36 L44 46 Z" stroke="none" />
+          <path d="M28 36 V54 L44 64 V46 M60 36 V54 L44 64" fill="none" stroke-width="2.3" />
         </g>
-        <!-- 在线追溯：扫码框 -->
-        <g v-else-if="kind === 'trace'">
-          <path d="M26 34 V26 H34 M54 26 H62 V34 M62 54 V62 H54 M34 62 H26 V54" stroke-width="2.6" />
-          <path d="M34 36 H38 V40 H34 Z M42 36 H54 V40 H42 Z M34 44 H46 V54 H34 Z M50 44 H54 V54 H50 Z" stroke-width="1.8" />
+        <g v-else-if="kind === 'trace'" fill="none">
+          <path d="M24 34 V24 H34 M54 24 H64 V34 M64 54 V64 H54 M34 64 H24 V54" stroke-width="3.2" />
+          <path d="M32 34 H40 V42 H32 Z M46 34 H56 V42 H46 Z M32 46 H44 V56 H32 Z M48 46 H56 V56 H48 Z" stroke-width="2.2" />
         </g>
-        <!-- 能源管理：闪电 -->
         <g v-else-if="kind === 'energy'">
-          <path d="M50 20 L32 46 H44 L38 68 L60 40 H48 Z" stroke-width="2.4" />
+          <path d="M50 18 L30 46 H44 L36 70 L64 38 H50 Z" stroke="none" />
         </g>
-        <!-- 设备维保：扳手齿轮 -->
-        <g v-else-if="kind === 'maint'">
-          <circle cx="38" cy="50" r="10" stroke-width="2.4" />
-          <circle cx="38" cy="50" r="3.4" stroke-width="2" />
-          <path d="M46 42 L62 26 L68 32 L52 48" stroke-width="2.6" />
-          <path d="M60 24 L70 34" stroke-width="2.2" />
+        <g v-else-if="kind === 'maint'" fill="none">
+          <circle cx="36" cy="52" r="12" stroke-width="3" />
+          <circle cx="36" cy="52" r="4" stroke="none" />
+          <path d="M46 42 L64 24 L72 32 L54 50" stroke-width="3.2" />
         </g>
-        <!-- AI设备知识库：书页 -->
         <g v-else-if="kind === 'eqkb'">
-          <path d="M24 28 C32 24 40 24 44 28 C48 24 56 24 64 28 V62 C56 58 48 58 44 62 C40 58 32 58 24 62 Z" stroke-width="2.4" />
-          <path d="M44 28 V62" stroke-width="2.2" />
-          <path d="M54 22 L58 18 L62 24" stroke-width="2.2" />
+          <path d="M22 26 C32 20 40 20 44 26 C48 20 56 20 66 26 V64 C56 58 48 58 44 64 C40 58 32 58 22 64 Z" stroke="none" />
+          <path d="M44 26 V64" fill="none" stroke="#0d6f96" stroke-width="2.2" />
         </g>
-        <!-- 图档管理：图纸折角 -->
         <g v-else-if="kind === 'draw'">
-          <path d="M28 24 H52 L64 36 V64 H28 Z" stroke-width="2.4" />
-          <path d="M52 24 V36 H64" stroke-width="2.2" />
-          <path d="M36 46 H56 M36 54 H50" stroke-width="2.2" />
+          <path d="M26 22 H52 L66 36 V68 H26 Z" stroke="none" />
+          <path d="M52 22 V36 H66" fill="none" stroke="#0d6f96" stroke-width="2.2" />
+          <path d="M34 46 H58 M34 54 H50" fill="none" stroke="#0d6f96" stroke-width="2.4" />
         </g>
-        <!-- ESOP：双页工序 -->
         <g v-else-if="kind === 'esop'">
-          <rect x="24" y="26" width="28" height="36" rx="3" stroke-width="2.2" />
-          <rect x="36" y="22" width="28" height="36" rx="3" stroke-width="2.4" />
-          <path d="M42 34 H56 M42 42 H52" stroke-width="2.1" />
+          <path d="M22 30 H50 V68 H22 Z" opacity="0.7" stroke="none" />
+          <path d="M36 20 H64 V58 H36 Z" stroke="none" />
+          <path d="M44 32 H56 M44 40 H52" fill="none" stroke="#0d6f96" stroke-width="2.4" />
         </g>
-        <!-- 安全生产：摄像头 -->
         <g v-else-if="kind === 'safety'">
-          <rect x="22" y="30" width="28" height="22" rx="4" stroke-width="2.4" />
-          <path d="M50 36 L64 28 V54 L50 46 Z" stroke-width="2.4" />
-          <circle cx="36" cy="41" r="5" stroke-width="2.2" />
-          <path d="M30 62 H58" stroke-width="2.2" />
+          <path d="M20 32 H50 V54 H20 Z" stroke="none" />
+          <path d="M50 36 L68 26 V60 L50 50 Z" stroke="none" />
+          <circle cx="35" cy="43" r="6" fill="none" stroke="#0d6f96" stroke-width="2.4" />
         </g>
-        <!-- 入场预约：门禁人 -->
         <g v-else-if="kind === 'visit'">
-          <circle cx="36" cy="30" r="7" stroke-width="2.4" />
-          <path d="M24 58 C24 46 30 42 36 42 C42 42 48 46 48 58" stroke-width="2.4" />
-          <path d="M54 34 H68 M62 26 V42" stroke-width="2.6" />
+          <circle cx="34" cy="28" r="8" stroke="none" />
+          <path d="M20 62 C20 46 26 42 34 42 C42 42 48 46 48 62 Z" stroke="none" />
+          <path d="M54 32 H72 M63 23 V41" fill="none" stroke-width="3.4" />
         </g>
-        <!-- 企业终端安全：盾锁 -->
         <g v-else-if="kind === 'edlp'">
-          <path d="M44 20 L64 28 V46 C64 58 52 66 44 70 C36 66 24 58 24 46 V28 Z" stroke-width="2.4" />
-          <rect x="36" y="42" width="16" height="12" rx="2" stroke-width="2.1" />
-          <path d="M40 42 V38 C40 35 42 33 44 33 C46 33 48 35 48 38 V42" stroke-width="2.1" />
+          <path d="M44 18 L68 28 V48 C68 62 52 72 44 76 C36 72 20 62 20 48 V28 Z" stroke="none" />
+          <rect x="36" y="44" width="16" height="12" rx="2" fill="none" stroke="#0d6f96" stroke-width="2.2" />
+          <path d="M40 44 V39 C40 36 42 34 44 34 C46 34 48 36 48 39 V44" fill="none" stroke="#0d6f96" stroke-width="2.2" />
         </g>
-        <!-- 知识库研发辅助：烧瓶 -->
-        <g v-else-if="kind === 'rdkb'">
-          <path d="M36 22 H52 M40 22 V38 L28 60 H60 L48 38 V22" stroke-width="2.4" />
-          <path d="M32 52 H56" stroke-width="2.2" />
-          <circle cx="58" cy="28" r="4" stroke-width="2" />
+        <g v-else-if="kind === 'rdkb'" fill="none">
+          <path d="M34 20 H54 M38 20 V38 L24 64 H64 L50 38 V20" stroke-width="2.8" />
+          <path d="M30 52 H58" stroke-width="2.6" />
+          <circle cx="60" cy="26" r="5" stroke-width="2.4" />
         </g>
-        <!-- AI排程：甘特条 -->
         <g v-else-if="kind === 'aps'">
-          <path d="M24 24 V64 M24 64 H66" stroke-width="2.2" />
-          <path d="M30 32 H52 M30 44 H62 M30 56 H44" stroke-width="3.2" />
+          <path d="M26 56 H38 V68 H26 Z" stroke="none" />
+          <path d="M42 36 H54 V68 H42 Z" stroke="none" />
+          <path d="M58 24 H70 V68 H58 Z" stroke="none" />
         </g>
-        <!-- AI凭证：票据章 -->
         <g v-else-if="kind === 'voucher'">
-          <rect x="26" y="24" width="36" height="42" rx="3" stroke-width="2.4" />
-          <path d="M34 36 H54 M34 44 H48" stroke-width="2.2" />
-          <circle cx="54" cy="56" r="8" stroke-width="2.2" />
-          <path d="M50 56 L53 59 L58 52" stroke-width="2.2" />
+          <path d="M26 20 H62 V70 L54 64 L46 70 L38 64 L26 70 Z" stroke="none" />
+          <path d="M34 34 H54 M34 42 H48" fill="none" stroke="#0d6f96" stroke-width="2.4" />
+          <circle cx="54" cy="54" r="8" fill="none" stroke="#0d6f96" stroke-width="2.3" />
         </g>
-        <!-- AI自动对账：双列对齐 -->
         <g v-else-if="kind === 'recon'">
-          <rect x="22" y="24" width="18" height="40" rx="3" stroke-width="2.2" />
-          <rect x="48" y="24" width="18" height="40" rx="3" stroke-width="2.2" />
-          <path d="M42 36 H46 M42 44 H46 M42 52 H46" stroke-width="2.4" />
+          <path d="M18 24 H40 V64 H18 Z" stroke="none" />
+          <path d="M48 24 H70 V64 H48 Z" stroke="none" />
+          <path d="M40 36 H48 M40 44 H48 M40 52 H48" fill="none" stroke-width="2.8" />
         </g>
-        <!-- 协同办公：三人 -->
         <g v-else-if="kind === 'oa'">
-          <circle cx="44" cy="28" r="6.5" stroke-width="2.3" />
-          <path d="M32 50 C32 40 38 38 44 38 C50 38 56 40 56 50" stroke-width="2.3" />
-          <circle cx="26" cy="36" r="5" stroke-width="2.1" />
-          <path d="M16 58 C16 50 20 48 26 48 C32 48 36 50 36 56" stroke-width="2.1" />
-          <circle cx="62" cy="36" r="5" stroke-width="2.1" />
-          <path d="M52 56 C52 50 56 48 62 48 C68 48 72 50 72 58" stroke-width="2.1" />
+          <circle cx="44" cy="26" r="8" stroke="none" />
+          <path d="M30 54 C30 42 36 38 44 38 C52 38 58 42 58 54 Z" stroke="none" />
+          <circle cx="24" cy="34" r="6" stroke="none" />
+          <path d="M14 62 C14 52 18 49 24 49 C30 49 34 52 34 60 Z" stroke="none" />
+          <circle cx="64" cy="34" r="6" stroke="none" />
+          <path d="M54 60 C54 52 58 49 64 49 C70 49 74 52 74 62 Z" stroke="none" />
         </g>
-        <!-- 未登记模块 -->
-        <g v-else>
+        <g v-else fill="none">
           <path d="M32 50 L44 28 L56 50 Z" stroke-width="2.2" />
-          <circle cx="44" cy="28" r="3.2" fill="#fff" stroke="none" />
-          <circle cx="32" cy="50" r="3.2" fill="#fff" stroke="none" />
-          <circle cx="56" cy="50" r="3.2" fill="#fff" stroke="none" />
+          <circle cx="44" cy="28" r="3.2" stroke="none" />
+          <circle cx="32" cy="50" r="3.2" stroke="none" />
+          <circle cx="56" cy="50" r="3.2" stroke="none" />
         </g>
       </g>
     </g>
@@ -192,7 +163,7 @@
 <script setup>
 import { computed } from 'vue'
 
-const KIND = {
+const KIND_BY_CODE = {
   EXT_PDM: 'pdm',
   EXT_PACK_AI: 'pack',
   EXT_CAD: 'cad',
@@ -217,12 +188,47 @@ const KIND = {
   APP_OA: 'oa'
 }
 
+const KIND_BY_NAME = {
+  设备故障预测: 'pdm',
+  礼盒包装AI: 'pack',
+  CAD拆解: 'cad',
+  周计划: 'week',
+  售后管理: 'after',
+  轻工单: 'work',
+  设备监控平台: 'monitor',
+  轻仓储: 'wms',
+  在线追溯: 'trace',
+  能源管理: 'energy',
+  设备维保: 'maint',
+  AI设备知识库: 'eqkb',
+  图档管理: 'draw',
+  ESOP管理: 'esop',
+  安全生产AI行为监控: 'safety',
+  入场预约: 'visit',
+  企业终端安全管理: 'edlp',
+  知识库研发辅助: 'rdkb',
+  AI排程预测: 'aps',
+  AI凭证自动处理: 'voucher',
+  AI自动对账: 'recon',
+  协同办公: 'oa'
+}
+
 const props = defineProps({
   code: { type: String, default: '' },
+  name: { type: String, default: '' },
   size: { type: String, default: 'md' }
 })
 
-const kind = computed(() => KIND[(props.code || '').trim()] || 'mesh')
+const kind = computed(() => {
+  const code = (props.code || '').trim()
+  if (KIND_BY_CODE[code]) return KIND_BY_CODE[code]
+  const name = (props.name || '').replace(/\s/g, '')
+  if (KIND_BY_NAME[name]) return KIND_BY_NAME[name]
+  for (const [label, value] of Object.entries(KIND_BY_NAME)) {
+    if (name && (name.includes(label) || label.includes(name))) return value
+  }
+  return 'mesh'
+})
 
 const uid = Math.random().toString(36).slice(2, 8)
 const hex = 'M44 6 L76 24.5 L76 63.5 L44 82 L12 63.5 L12 24.5 Z'

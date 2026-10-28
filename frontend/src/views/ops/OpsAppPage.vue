@@ -4,7 +4,7 @@
     <p class="ops-lead">当前按模块代码内置矢量图标。单独上传覆盖下个版本做，不在企业侧配置。</p>
     <div class="ops-icons">
       <div v-for="item in rows" :key="item.appCode" class="ops-icon-card">
-        <AppMark :code="item.appCode" />
+        <AppMark :code="item.appCode" :name="item.appName" />
         <div>
           <b>{{ item.appName }}</b>
           <small>{{ item.appCode }}</small>

@@ -15,7 +15,7 @@
     <div v-if="shown.length" class="org-app-grid">
       <div v-for="app in shown" :key="app.appCode" class="org-app-tile">
         <button class="org-app-mark" type="button" :disabled="editing" @click="openApp(app)">
-          <AppMark :code="app.appCode" />
+          <AppMark :code="app.appCode" :name="app.appName" />
         </button>
         <div class="org-app-name">{{ app.appName }}</div>
         <label v-if="editing" class="org-app-hide">
