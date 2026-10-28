@@ -2,7 +2,7 @@
   <div>
     <div class="block">
       <div class="hd">
-        <span>已开通模块</span>
+        <span>企业智改数转工业APP统一总集</span>
       </div>
       <el-button type="primary" plain size="small" @click="$router.push('/workbench/biz/app')">配置入口</el-button>
     </div>
