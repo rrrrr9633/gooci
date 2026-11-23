@@ -5,16 +5,16 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Set;
 
 /**
  * @ClassName ExtTargetSupport
- * @Description 外接模块目标：回环地址、探活、网关客户端。探活用 TCP，避免 Vite 编译拖死 HTTP GET
+ * @Description 外接模块下一跳只允许允许名单内的公网 https。本机回环和内网地址已停用。测试档仅 AI 中台可转发到回环 http(s)
  * @author GooCi
  * @date 2026-03-26
  */
@@ -28,6 +28,22 @@ public final class ExtTargetSupport {
     private ExtTargetSupport() {
     }
 
+    public record Policy(Set<String> allowHosts, boolean publicHttpsOnly) {
+    }
+
+    public static Policy policy(String allowHostsText, boolean publicHttpsOnly) {
+        Set<String> hosts = new LinkedHashSet<>();
+        if (allowHostsText != null && !allowHostsText.isBlank()) {
+            for (String part : allowHostsText.split(",")) {
+                String host = part.trim().toLowerCase(Locale.ROOT);
+                if (!host.isEmpty()) {
+                    hosts.add(host);
+                }
+            }
+        }
+        return new Policy(Set.copyOf(hosts), publicHttpsOnly);
+    }
+
     public static HttpClient httpClient(Duration connectTimeout) {
         return HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
@@ -36,57 +52,119 @@ public final class ExtTargetSupport {
                 .build();
     }
 
-    public static URI loopback4(URI uri) {
-        if (uri == null || uri.getHost() == null) {
-            return uri;
-        }
-        String host = uri.getHost();
-        if (!"localhost".equalsIgnoreCase(host) && !"::1".equals(host) && !"[::1]".equals(host)) {
-            return uri;
-        }
-        try {
-            return new URI(
-                    uri.getScheme(),
-                    uri.getUserInfo(),
-                    "127.0.0.1",
-                    uri.getPort(),
-                    uri.getPath(),
-                    uri.getQuery(),
-                    uri.getFragment());
-        } catch (URISyntaxException ex) {
-            return uri;
-        }
-    }
-
     public static boolean skipRequestHeader(String name) {
         return name != null && SKIP_REQUEST_HEADERS.contains(name.toLowerCase(Locale.ROOT));
     }
 
-    public static Probe probe(String targetUrl) {
+    public static boolean loopbackHost(String host) {
+        if (host == null || host.isBlank()) {
+            return false;
+        }
+        String value = host.trim().toLowerCase(Locale.ROOT);
+        if (value.startsWith("[") && value.endsWith("]")) {
+            value = value.substring(1, value.length() - 1);
+        }
+        return "localhost".equals(value) || "127.0.0.1".equals(value) || "::1".equals(value);
+    }
+
+    public static boolean retiredLocalHop(String targetUrl) {
         if (targetUrl == null || targetUrl.isBlank()) {
-            return new Probe("none", "未填写内网目标，网关无处转发");
+            return false;
         }
         URI uri;
         try {
-            uri = loopback4(URI.create(targetUrl.trim()));
+            uri = URI.create(targetUrl.trim());
+        } catch (IllegalArgumentException ex) {
+            return true;
+        }
+        String scheme = uri.getScheme();
+        if (scheme == null || "http".equalsIgnoreCase(scheme)) {
+            return true;
+        }
+        String host = uri.getHost();
+        return host == null || host.isBlank() || localName(host) || privateLiteral(host);
+    }
+
+    public static String denyReason(String targetUrl, Policy policy) {
+        return denyReason(targetUrl, policy, false);
+    }
+
+    public static String denyReason(String targetUrl, Policy policy, boolean hubLocalForward) {
+        if (targetUrl == null || targetUrl.isBlank()) {
+            return "未填写下一跳，网关无处转发";
+        }
+        URI uri;
+        try {
+            uri = URI.create(targetUrl.trim());
+        } catch (IllegalArgumentException ex) {
+            return "目标地址不是合法 URL";
+        }
+        if (hubLocalForward && loopbackUrl(uri)) {
+            return null;
+        }
+        String scheme = uri.getScheme();
+        if (!"https".equalsIgnoreCase(scheme)) {
+            return "已停用本机连接，下一跳必须是公网 https";
+        }
+        String host = uri.getHost();
+        if (host == null || host.isBlank()) {
+            return "目标地址缺少主机";
+        }
+        if (localName(host) || privateLiteral(host)) {
+            return "已停用本机和内网下一跳，请改到其他云服务器的公网 https";
+        }
+        Policy gate = policy == null ? ExtTargetSupport.policy("", true) : policy;
+        String key = host.toLowerCase(Locale.ROOT);
+        if (gate.allowHosts().isEmpty() || !gate.allowHosts().contains(key)) {
+            return "下一跳不在允许名单";
+        }
+        try {
+            InetAddress[] addresses = InetAddress.getAllByName(host);
+            if (addresses.length == 0) {
+                return "主机名无法解析";
+            }
+            for (InetAddress address : addresses) {
+                if (!publicAddress(address)) {
+                    return "下一跳解析到非公网地址";
+                }
+            }
+        } catch (UnknownHostException ex) {
+            return "主机名无法解析";
+        }
+        return null;
+    }
+
+    public static Probe probe(String targetUrl, Policy policy) {
+        return probe(targetUrl, policy, false);
+    }
+
+    public static Probe probe(String targetUrl, Policy policy, boolean hubLocalForward) {
+        if (targetUrl == null || targetUrl.isBlank()) {
+            return new Probe("none", "未填写下一跳，网关无处转发");
+        }
+        String deny = denyReason(targetUrl, policy, hubLocalForward);
+        if (deny != null) {
+            return new Probe("down", deny);
+        }
+        URI uri;
+        try {
+            uri = URI.create(targetUrl.trim());
         } catch (IllegalArgumentException ex) {
             return new Probe("down", "目标地址不是合法 URL");
         }
         String host = uri.getHost();
-        if (host == null || host.isBlank()) {
-            return new Probe("down", "目标地址缺少主机");
-        }
         int port = uri.getPort();
         if (port < 0) {
-            port = "https".equalsIgnoreCase(uri.getScheme()) ? 443 : 80;
+            port = "http".equalsIgnoreCase(uri.getScheme()) ? 80 : 443;
         }
+        boolean loopback = hubLocalForward && loopbackUrl(uri);
         try {
             InetAddress address = InetAddress.getByName(host);
-            if (address.isLoopbackAddress() && address.getAddress().length != 4) {
-                address = InetAddress.getByName("127.0.0.1");
+            if (!loopback && !publicAddress(address)) {
+                return new Probe("down", "下一跳解析到非公网地址");
             }
             try (Socket socket = new Socket()) {
-                socket.connect(new InetSocketAddress(address, port), 1500);
+                socket.connect(new InetSocketAddress(address, port), 3000);
             }
             return new Probe("up", "端口已监听 " + address.getHostAddress() + ":" + port);
         } catch (UnknownHostException ex) {
@@ -100,5 +178,62 @@ public final class ExtTargetSupport {
     }
 
     public record Probe(String health, String hint) {
+    }
+
+    private static boolean loopbackUrl(URI uri) {
+        String scheme = uri.getScheme();
+        if (scheme == null) {
+            return false;
+        }
+        if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
+            return false;
+        }
+        return loopbackHost(uri.getHost());
+    }
+
+    private static boolean localName(String host) {
+        if (loopbackHost(host)) {
+            return true;
+        }
+        String value = host.trim().toLowerCase(Locale.ROOT);
+        return value.endsWith(".local")
+                || value.endsWith(".localhost")
+                || value.endsWith(".internal")
+                || value.endsWith(".lan");
+    }
+
+    private static boolean privateLiteral(String host) {
+        String value = host.trim().toLowerCase(Locale.ROOT);
+        if (value.startsWith("[") && value.endsWith("]")) {
+            value = value.substring(1, value.length() - 1);
+        }
+        boolean ipv4 = value.chars().allMatch(ch -> (ch >= '0' && ch <= '9') || ch == '.');
+        boolean ipv6 = value.indexOf(':') >= 0;
+        if (!ipv4 && !ipv6) {
+            return false;
+        }
+        try {
+            return !publicAddress(InetAddress.getByName(value));
+        } catch (UnknownHostException ex) {
+            return true;
+        }
+    }
+
+    private static boolean publicAddress(InetAddress address) {
+        if (address.isAnyLocalAddress()
+                || address.isLoopbackAddress()
+                || address.isLinkLocalAddress()
+                || address.isSiteLocalAddress()
+                || address.isMulticastAddress()) {
+            return false;
+        }
+        byte[] raw = address.getAddress();
+        if (raw.length == 16) {
+            int head = raw[0] & 0xff;
+            if ((head & 0xfe) == 0xfc) {
+                return false;
+            }
+        }
+        return true;
     }
 }

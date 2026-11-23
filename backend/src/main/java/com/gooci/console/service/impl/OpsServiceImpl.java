@@ -1,6 +1,7 @@
 package com.gooci.console.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.gooci.console.common.AiFamily;
 import com.gooci.console.common.BusinessException;
 import com.gooci.console.common.ExtTargetSupport;
 import com.gooci.console.domain.AppOpen;
@@ -24,11 +25,11 @@ import com.gooci.console.web.dto.OpsSessionView;
 import com.gooci.console.web.dto.OpsSiteView;
 import com.gooci.console.web.dto.SaveOpsAppCommand;
 import com.gooci.console.web.dto.SaveOpsSiteCommand;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -51,6 +52,8 @@ public class OpsServiceImpl implements OpsService {
     private final SysParameterMapper sysParameterMapper;
     private final PasswordEncoder passwordEncoder;
     private final TokenSupport tokenSupport;
+    private final ExtTargetSupport.Policy targetPolicy;
+    private final boolean aiHubLocalForward;
 
     public OpsServiceImpl(
             OpsUserMapper opsUserMapper,
@@ -58,13 +61,18 @@ public class OpsServiceImpl implements OpsService {
             AppOpenMapper appOpenMapper,
             SysParameterMapper sysParameterMapper,
             PasswordEncoder passwordEncoder,
-            TokenSupport tokenSupport) {
+            TokenSupport tokenSupport,
+            @Value("${gooci.ext-allow-hosts:}") String allowHosts,
+            @Value("${gooci.ext-public-https-only:false}") boolean publicHttpsOnly,
+            @Value("${gooci.ai-hub-local-forward:false}") boolean aiHubLocalForward) {
         this.opsUserMapper = opsUserMapper;
         this.enterRecordMapper = enterRecordMapper;
         this.appOpenMapper = appOpenMapper;
         this.sysParameterMapper = sysParameterMapper;
         this.passwordEncoder = passwordEncoder;
         this.tokenSupport = tokenSupport;
+        this.targetPolicy = ExtTargetSupport.policy(allowHosts, publicHttpsOnly);
+        this.aiHubLocalForward = aiHubLocalForward;
     }
 
     @Override
@@ -165,7 +173,7 @@ public class OpsServiceImpl implements OpsService {
         String hide = "1".equals(command.getHideFlag()) ? "1" : "0";
         String target = command.getTargetUrl() == null ? "" : command.getTargetUrl().trim();
         if (!target.isBlank()) {
-            checkTarget(target);
+            checkTarget(open.getAppCode(), target);
         }
         open.setHideFlag(hide);
         open.setTargetUrl(target);
@@ -195,7 +203,7 @@ public class OpsServiceImpl implements OpsService {
         }
         String target = command.getTargetUrl() == null ? "" : command.getTargetUrl().trim();
         if (!target.isBlank()) {
-            checkTarget(target);
+            checkTarget(code, target);
         }
         AppOpen open = appOpenMapper.selectOne(new LambdaQueryWrapper<AppOpen>()
                 .eq(AppOpen::getTsEnterId, enter.getId())
@@ -281,7 +289,7 @@ public class OpsServiceImpl implements OpsService {
             if (!implanted(open)) {
                 continue;
             }
-            ExtTargetSupport.Probe probe = ExtTargetSupport.probe(open.getTargetUrl());
+            ExtTargetSupport.Probe probe = ExtTargetSupport.probe(open.getTargetUrl(), targetPolicy, localForward(open));
             OpsAppRowView row = new OpsAppRowView();
             row.setAppCode(open.getAppCode());
             row.setAppName(open.getAppName());
@@ -311,20 +319,19 @@ public class OpsServiceImpl implements OpsService {
         return max + 10;
     }
 
-    private void checkTarget(String target) {
-        URI uri;
-        try {
-            uri = URI.create(target);
-        } catch (IllegalArgumentException ex) {
-            throw new BusinessException("目标地址不正确");
+    private void checkTarget(String appCode, String target) {
+        String deny = ExtTargetSupport.denyReason(target, targetPolicy, localForwardCode(appCode));
+        if (deny != null) {
+            throw new BusinessException(deny);
         }
-        String scheme = uri.getScheme();
-        if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
-            throw new BusinessException("目标地址只允许 http/https");
-        }
-        if (uri.getHost() == null || uri.getHost().isBlank()) {
-            throw new BusinessException("目标地址缺少主机");
-        }
+    }
+
+    private boolean localForward(AppOpen open) {
+        return open != null && localForwardCode(open.getAppCode());
+    }
+
+    private boolean localForwardCode(String appCode) {
+        return aiHubLocalForward && AiFamily.HUB.equals(appCode);
     }
 
     private boolean hasPending(String status, String remark) {

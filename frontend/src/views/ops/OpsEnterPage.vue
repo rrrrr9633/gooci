@@ -2,8 +2,8 @@
   <div class="ops-page">
     <h2>{{ title }}</h2>
     <p class="ops-lead">
-      探活是控制台进程去连 TARGET_URL，不是浏览器去连。可达=已连通该内网地址；未达=端口没人听、超时或主机不对。
-      生产加模块：先把进程放到这家客户自己的 VPC 模块机，再点「植入」写开通记录。模块不会自己上报。
+      探活是门口进程去连 TARGET_URL，不是浏览器去连。下一跳必须是允许名单里的公网 https，本机回环和内网地址已停用。
+      模块放在其他云服务器，安全组只放行门口。AI 中台同一条路，运行时是 deepseek-harness，不在本机起进程。
     </p>
     <div class="ops-toolbar">
       <el-button type="primary" @click="openImplant">植入模块</el-button>
@@ -14,7 +14,7 @@
       <el-table-column label="入口" min-width="160" prop="entryPath" />
       <el-table-column label="目标" min-width="240">
         <template #default="{ row }">
-          <el-input v-model="row.targetUrl" size="small" placeholder="http://内网IP:端口" />
+          <el-input v-model="row.targetUrl" size="small" placeholder="https://模块公网主机" />
         </template>
       </el-table-column>
       <el-table-column label="探活" width="120">
@@ -50,8 +50,8 @@
         <el-form-item label="模块名称">
           <el-input v-model="form.appName" placeholder="对客显示名" />
         </el-form-item>
-        <el-form-item label="内网目标">
-          <el-input v-model="form.targetUrl" placeholder="http://10.x.x.x:端口" />
+        <el-form-item label="公网目标">
+          <el-input v-model="form.targetUrl" placeholder="https://模块公网主机" />
         </el-form-item>
         <el-form-item label="入口路径">
           <el-input v-model="form.entryPath" placeholder="空则 /workbench/ext/代码" />

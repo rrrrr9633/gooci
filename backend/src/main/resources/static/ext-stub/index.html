@@ -23,14 +23,14 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background
 <div class="wrap">
   <div class="tag">外接模块壳 · 非业务功能</div>
   <h1 id="name">演示外接模块</h1>
-  <p class="lead">客户仍走同一域名路径。生产由网关把本路径转到内网模块机，不另写公网 A 记录。</p>
+  <p class="lead">客户仍走同一域名路径。门口只把本路径转到允许名单内的公网 https，不再连接本机回环或内网端口。</p>
   <div class="grid">
     <div class="card"><b>—</b><span>业务功能未植入</span></div>
     <div class="card"><b>壳</b><span>仅验证入口与跳转</span></div>
-    <div class="card"><b>内网</b><span>模块机不暴露公网</span></div>
+    <div class="card"><b>公网</b><span>其他云服务器的 https</span></div>
   </div>
   <div class="note">
-    当前看到的是本地壳。真正模块上云后，把 <code>TM_APP_OPEN.TARGET_URL</code> 写成内网地址，网关热挂同一路径即可。
+    当前没有可用的公网下一跳。把 <code>TARGET_URL</code> 写成允许名单内的 https，或设置 <code>GOOCI_AI_HUB_URL</code> 指向其他云上的 deepseek-harness。
     编码：<code id="code">DEMO_SHELL</code>
   </div>
 </div>

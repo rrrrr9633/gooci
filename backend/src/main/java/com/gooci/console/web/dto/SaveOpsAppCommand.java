@@ -7,7 +7,7 @@ import lombok.Setter;
 
 /**
  * @ClassName SaveOpsAppCommand
- * @Description 厂商改某企业已植入模块的隐藏与内网目标
+ * @Description 厂商改某企业已植入模块的隐藏与下一跳
  * @author GooCi
  * @date 2026-03-26
  */

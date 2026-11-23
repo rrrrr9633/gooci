@@ -1,11 +1,13 @@
 package com.gooci.console.web;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.gooci.console.common.AiFamily;
 import com.gooci.console.common.ExtTargetSupport;
 import com.gooci.console.domain.AppOpen;
 import com.gooci.console.mapper.AppOpenMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
@@ -43,10 +45,18 @@ public class ModuleShellController {
 
     private final AppOpenMapper appOpenMapper;
     private final HttpClient httpClient;
+    private final ExtTargetSupport.Policy targetPolicy;
+    private final boolean aiHubLocalForward;
 
-    public ModuleShellController(AppOpenMapper appOpenMapper) {
+    public ModuleShellController(
+            AppOpenMapper appOpenMapper,
+            @Value("${gooci.ext-allow-hosts:}") String allowHosts,
+            @Value("${gooci.ext-public-https-only:false}") boolean publicHttpsOnly,
+            @Value("${gooci.ai-hub-local-forward:false}") boolean aiHubLocalForward) {
         this.appOpenMapper = appOpenMapper;
         this.httpClient = ExtTargetSupport.httpClient(Duration.ofSeconds(5));
+        this.targetPolicy = ExtTargetSupport.policy(allowHosts, publicHttpsOnly);
+        this.aiHubLocalForward = aiHubLocalForward;
     }
 
     @RequestMapping({"/ext/{appCode}", "/ext/{appCode}/", "/ext/{appCode}/**"})
@@ -103,7 +113,7 @@ public class ModuleShellController {
     private String joinTarget(String targetUrl, String extra, String query) {
         URI uri;
         try {
-            uri = ExtTargetSupport.loopback4(URI.create(targetUrl));
+            uri = URI.create(targetUrl);
         } catch (IllegalArgumentException ex) {
             return null;
         }
@@ -134,6 +144,10 @@ public class ModuleShellController {
         return joined;
     }
 
+    private boolean localForward(AppOpen open) {
+        return aiHubLocalForward && open != null && AiFamily.HUB.equals(open.getAppCode());
+    }
+
     private String proxy(AppOpen open, String targetUrl, HttpServletRequest inbound, HttpServletResponse outbound)
             throws IOException {
         if (targetUrl == null || targetUrl.isBlank()) {
@@ -141,9 +155,13 @@ public class ModuleShellController {
         }
         URI uri;
         try {
-            uri = ExtTargetSupport.loopback4(URI.create(targetUrl));
+            uri = URI.create(targetUrl);
         } catch (IllegalArgumentException ex) {
             return "目标地址不是合法 URL";
+        }
+        String deny = ExtTargetSupport.denyReason(targetUrl, targetPolicy, localForward(open));
+        if (deny != null) {
+            return deny;
         }
         byte[] body = inbound.getInputStream().readAllBytes();
         String method = inbound.getMethod() == null ? "GET" : inbound.getMethod();
@@ -159,7 +177,7 @@ public class ModuleShellController {
         Enumeration<String> names = inbound.getHeaderNames();
         while (names != null && names.hasMoreElements()) {
             String name = names.nextElement();
-            if (name == null || ExtTargetSupport.skipRequestHeader(name)) {
+            if (name == null || ExtTargetSupport.skipRequestHeader(name) || name.toLowerCase(Locale.ROOT).startsWith("x-gooci-")) {
                 continue;
             }
             Enumeration<String> values = inbound.getHeaders(name);
@@ -171,6 +189,13 @@ public class ModuleShellController {
                     // Java HttpClient 拒绝部分 hop-by-hop 头，跳过即可
                 }
             }
+        }
+        builder.header("X-Gooci-Enter-Id", open.getTsEnterId() == null ? "" : open.getTsEnterId());
+        builder.header("X-Gooci-App-Code", open.getAppCode() == null ? "" : open.getAppCode());
+        builder.header("X-Gooci-Door", "console");
+        String fn = inbound.getParameter("fn");
+        if (AiFamily.function(fn)) {
+            builder.header("X-Gooci-Fn", fn.trim());
         }
         try {
             HttpResponse<byte[]> remote = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofByteArray());

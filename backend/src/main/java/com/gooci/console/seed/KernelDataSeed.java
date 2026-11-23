@@ -2,6 +2,8 @@ package com.gooci.console.seed;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.gooci.console.common.AiFamily;
+import com.gooci.console.common.ExtTargetSupport;
 import com.gooci.console.domain.AppOpen;
 import com.gooci.console.domain.AppRole;
 import com.gooci.console.domain.DeptRecord;
@@ -66,9 +68,9 @@ public class KernelDataSeed implements ApplicationRunner {
     private final StaffCodeRuleMapper staffCodeRuleMapper;
     private final OpsUserMapper opsUserMapper;
     private final PasswordEncoder passwordEncoder;
-    private final String extPdmUrl;
-    private final String extPackUrl;
-    private final boolean seedDemoModules;
+    private final String aiHubUrl;
+    private final boolean aiHubLocalForward;
+    private final ExtTargetSupport.Policy targetPolicy;
 
     private static final String[][] SOFTWARE_APPS = {
             {"APP_AFTER", "售后管理"},
@@ -78,16 +80,10 @@ public class KernelDataSeed implements ApplicationRunner {
             {"APP_TRACE", "在线追溯"},
             {"APP_ENERGY", "能源管理"},
             {"APP_MAINT", "设备维保"},
-            {"APP_EQKB", "AI设备知识库"},
             {"APP_DRAW", "图档管理"},
             {"APP_ESOP", "ESOP管理"},
-            {"APP_SAFETY", "安全生产AI行为监控"},
             {"APP_VISIT", "入场预约"},
             {"APP_EDLP", "企业终端安全管理"},
-            {"APP_RDKB", "知识库研发辅助"},
-            {"APP_APS", "AI排程预测"},
-            {"APP_VOUCHER", "AI凭证自动处理"},
-            {"APP_RECON", "AI自动对账"},
             {"APP_OA", "协同办公"}
     };
 
@@ -106,9 +102,9 @@ public class KernelDataSeed implements ApplicationRunner {
             StaffCodeRuleMapper staffCodeRuleMapper,
             OpsUserMapper opsUserMapper,
             PasswordEncoder passwordEncoder,
-            @Value("${gooci.ext-pdm-url:}") String extPdmUrl,
-            @Value("${gooci.ext-pack-url:}") String extPackUrl,
-            @Value("${gooci.seed-demo-modules:false}") boolean seedDemoModules) {
+            @Value("${gooci.ai-hub-url:}") String aiHubUrl,
+            @Value("${gooci.ai-hub-local-forward:false}") boolean aiHubLocalForward,
+            @Value("${gooci.ext-allow-hosts:}") String allowHosts) {
         this.enterRecordMapper = enterRecordMapper;
         this.sysUserMapper = sysUserMapper;
         this.sysMenuMapper = sysMenuMapper;
@@ -123,9 +119,9 @@ public class KernelDataSeed implements ApplicationRunner {
         this.staffCodeRuleMapper = staffCodeRuleMapper;
         this.opsUserMapper = opsUserMapper;
         this.passwordEncoder = passwordEncoder;
-        this.extPdmUrl = extPdmUrl;
-        this.extPackUrl = extPackUrl;
-        this.seedDemoModules = seedDemoModules;
+        this.aiHubUrl = aiHubUrl;
+        this.aiHubLocalForward = aiHubLocalForward;
+        this.targetPolicy = ExtTargetSupport.policy(allowHosts, true);
     }
 
     @Override
@@ -137,9 +133,9 @@ public class KernelDataSeed implements ApplicationRunner {
         ensureDepts(enterId, userId);
         ensureAppCatalog(enterId, userId);
         ensureSoftwareApps(userId);
-        if (seedDemoModules) {
-            seedDemoModules(enterId, userId);
-        }
+        retireLocalHops();
+        bindAiHub(userId);
+        placeAiFunctions(userId);
         ensureOrgDemo(enterId, userId);
         ensureStaffDemo(enterId, userId);
         ensureOpsUser();
@@ -222,7 +218,7 @@ public class KernelDataSeed implements ApplicationRunner {
     private void ensureMenus() {
         String workbench = ensureMenu(null, "workbench", "工作台", "/workbench/home", "monitor", 10);
         ensureMenu(workbench, "workbench-home", "工作台", "/workbench/home", null, 11);
-        ensureMenu(workbench, "workbench-profile", "个人信息", "/workbench/profile", null, 12);
+        ensureMenu(workbench, "workbench-ai", "AI中台", "/workbench/ext/AI_HUB", null, 13);
 
         String org = ensureMenu(null, "org", "组织管理", "/workbench/org/enterprise", "office", 20);
         ensureMenu(org, "org-enterprise", "企业信息", "/workbench/org/enterprise", null, 21);
@@ -322,21 +318,71 @@ public class KernelDataSeed implements ApplicationRunner {
         }
     }
 
-    private void seedDemoModules(String enterId, String userId) {
-        ensureOpenApp(enterId, userId, "EXT_PDM", "设备故障预测", 30, "/workbench/ext/EXT_PDM", extPdmUrl);
-        ensureOpenApp(enterId, userId, "EXT_CAD", "CAD拆解", 32, "/workbench/app/EXT_CAD", null);
-        ensureOpenApp(enterId, userId, "EXT_WEEK", "周计划", 34, "/workbench/app/EXT_WEEK", null);
-        ensureOpenApp(enterId, userId, "EXT_PACK_AI", "礼盒包装AI", 40, "/workbench/ext/EXT_PACK_AI", extPackUrl);
-        ensureAppRole(enterId, userId, "EXT_PDM", "FUNC", "超级管理员", 10);
-        ensureAppRole(enterId, userId, "EXT_CAD", "FUNC", "超级管理员", 10);
-        ensureAppRole(enterId, userId, "EXT_WEEK", "FUNC", "超级管理员", 10);
-        ensureAppRole(enterId, userId, "EXT_PACK_AI", "FUNC", "超级管理员", 10);
-        EnterRecord enter = enterRecordMapper.selectById(enterId);
-        String dataRole = enter == null || enter.getEnterName() == null ? "谷器演示工厂" : enter.getEnterName();
-        ensureAppRole(enterId, userId, "EXT_PDM", "DATA", dataRole, 10);
-        ensureAppRole(enterId, userId, "EXT_PACK_AI", "DATA", dataRole, 10);
-        ensureAppGrants(enterId, userId);
-        ensureDemoAuth(enterId);
+    private void retireLocalHops() {
+        List<AppOpen> opens = appOpenMapper.selectList(null);
+        for (AppOpen open : opens) {
+            if (!ExtTargetSupport.retiredLocalHop(open.getTargetUrl())) {
+                continue;
+            }
+            open.setTargetUrl("");
+            appOpenMapper.updateById(open);
+        }
+    }
+
+    private void bindAiHub(String operatorId) {
+        String raw = aiHubUrl == null ? "" : aiHubUrl.trim();
+        if (raw.isBlank() && aiHubLocalForward) {
+            raw = "http://127.0.0.1:8787";
+        }
+        String target = null;
+        if (!raw.isBlank() && ExtTargetSupport.denyReason(raw, targetPolicy, aiHubLocalForward) == null) {
+            target = raw;
+        }
+        List<EnterRecord> enters = enterRecordMapper.selectList(null);
+        for (EnterRecord enter : enters) {
+            ensureOpenApp(enter.getId(), operatorId, AiFamily.HUB, "AI中台", 400, "/workbench/ext/" + AiFamily.HUB, target);
+            pinOpen(enter.getId(), AiFamily.HUB, "AI中台", 400, "/workbench/ext/" + AiFamily.HUB);
+            ensureAppRole(enter.getId(), operatorId, AiFamily.HUB, "FUNC", "超级管理员", 10);
+        }
+    }
+
+    private void placeAiFunctions(String operatorId) {
+        List<EnterRecord> enters = enterRecordMapper.selectList(null);
+        int index = 0;
+        for (AiFamily.Fn fn : AiFamily.FUNCTIONS) {
+            int sortNo = 410 + index * 10;
+            index++;
+            for (EnterRecord enter : enters) {
+                ensureOpenApp(enter.getId(), operatorId, fn.code(), fn.name(), sortNo, AiFamily.entry(fn.code()), null);
+                pinOpen(enter.getId(), fn.code(), fn.name(), sortNo, AiFamily.entry(fn.code()));
+                ensureAppRole(enter.getId(), operatorId, fn.code(), "FUNC", "超级管理员", 10);
+            }
+        }
+    }
+
+    private void pinOpen(String enterId, String code, String name, int sortNo, String entryPath) {
+        AppOpen exist = appOpenMapper.selectOne(new LambdaQueryWrapper<AppOpen>()
+                .eq(AppOpen::getTsEnterId, enterId)
+                .eq(AppOpen::getAppCode, code));
+        if (exist == null) {
+            return;
+        }
+        boolean dirty = false;
+        if (!name.equals(exist.getAppName())) {
+            exist.setAppName(name);
+            dirty = true;
+        }
+        if (exist.getSortNo() == null || exist.getSortNo() != sortNo) {
+            exist.setSortNo(sortNo);
+            dirty = true;
+        }
+        if (entryPath != null && !entryPath.equals(exist.getEntryPath())) {
+            exist.setEntryPath(entryPath);
+            dirty = true;
+        }
+        if (dirty) {
+            appOpenMapper.updateById(exist);
+        }
     }
 
     private void ensureOpenApp(String enterId, String userId, String code, String name, int sortNo, String entryPath, String targetUrl) {

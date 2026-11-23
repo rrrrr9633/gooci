@@ -27,7 +27,11 @@ gooci:
   jwt-secret: gooci-console-dev-secret-change-before-release-2026
   jwt-expire-hours: 12
   service-phone: ""
-  ext-demo-url: http://127.0.0.1:8091
+  ext-demo-url: ""
   ext-pdm-url: ""
   ext-pack-url: ""
   seed-demo-modules: false
+  ext-allow-hosts: ${GOOCI_EXT_ALLOW_HOSTS:}
+  ext-public-https-only: true
+  ai-hub-local-forward: false
+  ai-hub-url: ${GOOCI_AI_HUB_URL:}

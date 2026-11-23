@@ -19,3 +19,5 @@ backend/data/
 .env.production
 .local-dev-backup/
 .DS_Store
+._.*
+._*

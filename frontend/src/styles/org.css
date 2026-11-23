@@ -944,3 +944,33 @@
   border: 0;
   background: #fff;
 }
+.org-hub-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e6eef5;
+  background: #f7fbfe;
+}
+.org-hub-fn {
+  border: 1px solid #d5e6f2;
+  background: #fff;
+  color: var(--gooci-text);
+  border-radius: 14px;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.org-hub-fn.on {
+  background: #14afe7;
+  color: #fff;
+  border-color: #14afe7;
+}
+.org-hub-pick {
+  align-content: start;
+}
+.org-hub-pick .org-app-tile {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}

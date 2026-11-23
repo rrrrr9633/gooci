@@ -1,4 +1,4 @@
-# 生产档。域名 A 记录只指向网关公网 IP。模块 TARGET_URL 必须是客户 VPC 内网，禁止写公网 IP。
+# 生产档。域名 A 记录只指向门口公网 IP。模块 TARGET_URL 是门口才能访问的公网 https 下一跳，主机必须写进 GOOCI_EXT_ALLOW_HOSTS。浏览器不直连。库和文件不要暴露公网。
 spring:
   datasource:
     url: jdbc:mysql://${GOOCI_DB_HOST}:${GOOCI_DB_PORT:3306}/${GOOCI_DB_NAME:gooci}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=${GOOCI_DB_SSL:false}
@@ -16,3 +16,7 @@ gooci:
   ext-pdm-url: ${GOOCI_EXT_PDM_URL:}
   ext-pack-url: ${GOOCI_EXT_PACK_URL:}
   seed-demo-modules: false
+  ext-allow-hosts: ${GOOCI_EXT_ALLOW_HOSTS:}
+  ext-public-https-only: true
+  ai-hub-local-forward: false
+  ai-hub-url: ${GOOCI_AI_HUB_URL:}
