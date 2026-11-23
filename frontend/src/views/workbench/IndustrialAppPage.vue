@@ -12,17 +12,35 @@
       <button v-else class="org-gold" type="button" @click="startEdit">配置入口</button>
     </div>
 
-    <div v-if="shown.length" class="org-app-grid">
-      <div v-for="app in shown" :key="app.appCode" class="org-app-tile">
-        <button class="org-app-mark" type="button" :disabled="editing" @click="openApp(app)">
-          <AppMark :code="app.appCode" :name="app.appName" />
-        </button>
-        <div class="org-app-name">{{ app.appName }}</div>
-        <label v-if="editing" class="org-app-hide">
-          <input v-model="draft[app.appCode]" type="checkbox" true-value="1" false-value="0">
-          隐藏
-        </label>
-        <button v-else class="org-gold" type="button" @click="openAdmin(app)">配置管理员</button>
+    <div v-if="shown.length" class="org-app-split">
+      <div class="org-app-label">基础工具</div>
+      <div class="org-app-grid">
+        <div v-for="app in basicApps" :key="app.appCode" class="org-app-tile">
+          <button class="org-app-mark" type="button" :disabled="editing" @click="openApp(app)">
+            <AppMark :code="app.appCode" :name="app.appName" />
+          </button>
+          <div class="org-app-name">{{ app.appName }}</div>
+          <label v-if="editing" class="org-app-hide">
+            <input v-model="draft[app.appCode]" type="checkbox" true-value="1" false-value="0">
+            隐藏
+          </label>
+          <button v-else class="org-gold" type="button" @click="openAdmin(app)">配置管理员</button>
+        </div>
+      </div>
+      <div class="org-app-line"></div>
+      <div class="org-app-label">AI工具</div>
+      <div class="org-app-grid">
+        <div v-for="app in aiApps" :key="app.appCode" class="org-app-tile">
+          <button class="org-app-mark" type="button" :disabled="editing" @click="openApp(app)">
+            <AppMark :code="app.appCode" :name="app.appName" />
+          </button>
+          <div class="org-app-name">{{ app.appName }}</div>
+          <label v-if="editing" class="org-app-hide">
+            <input v-model="draft[app.appCode]" type="checkbox" true-value="1" false-value="0">
+            隐藏
+          </label>
+          <button v-else class="org-gold" type="button" @click="openAdmin(app)">配置管理员</button>
+        </div>
       </div>
     </div>
     <div v-else class="org-app-empty">暂无已开通工业APP</div>
@@ -92,11 +110,14 @@ const depts = ref([])
 const query = reactive({ deptId: '', keyword: '' })
 const staffSlice = ref({ records: [], total: 0, pageNo: 1, pageSize: 5 })
 
+const AI_CODES = new Set(['AI_HUB', 'APP_EQKB', 'APP_SAFETY', 'APP_RDKB', 'APP_APS', 'APP_VOUCHER', 'APP_RECON'])
 const shown = computed(() => {
   const apps = board.value.apps || []
   if (editing.value) return apps
   return apps.filter((app) => app.hideFlag !== '1')
 })
+const basicApps = computed(() => shown.value.filter((app) => !AI_CODES.has(app.appCode)))
+const aiApps = computed(() => shown.value.filter((app) => AI_CODES.has(app.appCode)))
 
 async function load() {
   board.value = await http.get('/console/biz/apps')

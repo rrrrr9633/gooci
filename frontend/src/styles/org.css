@@ -817,6 +817,17 @@
   font-size: 12px;
 }
 .org-app-actions { display: flex; gap: 10px; }
+.org-app-label {
+  padding: 18px 8px 0;
+  font-size: 15px;
+  font-weight: 650;
+  color: #145860;
+}
+.org-app-line {
+  height: 1px;
+  margin: 8px 8px 0;
+  background: #d5e4ec;
+}
 .org-app-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));

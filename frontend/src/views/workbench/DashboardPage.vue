@@ -6,11 +6,22 @@
       </div>
       <el-button type="primary" plain size="small" @click="$router.push('/workbench/biz/app')">配置入口</el-button>
     </div>
-    <div v-if="apps.length" class="home-apps">
-      <button v-for="app in apps" :key="app.appCode" class="home-app" type="button" @click="openApp(app)">
-        <AppMark :code="app.appCode" :name="app.appName" size="sm" />
-        <span>{{ app.appName }}</span>
-      </button>
+    <div v-if="apps.length" class="home-board">
+      <div class="home-label">基础工具</div>
+      <div class="home-apps">
+        <button v-for="app in basicApps" :key="app.appCode" class="home-app" type="button" @click="openApp(app)">
+          <AppMark :code="app.appCode" :name="app.appName" size="sm" />
+          <span>{{ app.appName }}</span>
+        </button>
+      </div>
+      <div class="home-line"></div>
+      <div class="home-label">AI工具</div>
+      <div class="home-apps">
+        <button v-for="app in aiApps" :key="app.appCode" class="home-app" type="button" @click="openApp(app)">
+          <AppMark :code="app.appCode" :name="app.appName" size="sm" />
+          <span>{{ app.appName }}</span>
+        </button>
+      </div>
     </div>
     <div v-else class="empty-apps">暂无已开通模块</div>
 
@@ -40,7 +51,10 @@ import AppMark from '../../components/AppMark.vue'
 const router = useRouter()
 const board = ref({ apps: [] })
 const todos = ref([])
+const AI_CODES = new Set(['AI_HUB', 'APP_EQKB', 'APP_SAFETY', 'APP_RDKB', 'APP_APS', 'APP_VOUCHER', 'APP_RECON'])
 const apps = computed(() => (board.value.apps || []).filter((app) => app.hideFlag !== '1'))
+const basicApps = computed(() => apps.value.filter((app) => !AI_CODES.has(app.appCode)))
+const aiApps = computed(() => apps.value.filter((app) => AI_CODES.has(app.appCode)))
 
 function openApp(app) {
   if (app.entryPath) router.push(app.entryPath)
@@ -72,14 +86,28 @@ onMounted(async () => {
   color: #9ab;
   margin-bottom: 16px;
 }
+.home-board {
+  background: #fff;
+  border-radius: 8px;
+  padding: 8px 10px 12px;
+  margin-bottom: 16px;
+}
+.home-label {
+  padding: 14px 12px 0;
+  font-size: 15px;
+  font-weight: 650;
+  color: #145860;
+}
+.home-line {
+  height: 1px;
+  margin: 4px 16px 0;
+  background: #d5e4ec;
+}
 .home-apps {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 16px;
-  background: #fff;
-  border-radius: 8px;
-  padding: 20px 18px 28px;
-  margin-bottom: 16px;
+  padding: 18px 8px 22px;
 }
 .home-app {
   border: 0;
