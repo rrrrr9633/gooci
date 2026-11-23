@@ -33,5 +33,5 @@ gooci:
   seed-demo-modules: false
   ext-allow-hosts: ${GOOCI_EXT_ALLOW_HOSTS:}
   ext-public-https-only: true
-  ai-hub-local-forward: false
+  ai-hub-local-forward: ${GOOCI_AI_HUB_LOCAL_FORWARD:false}
   ai-hub-url: ${GOOCI_AI_HUB_URL:}
