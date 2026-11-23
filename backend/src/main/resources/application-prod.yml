@@ -20,3 +20,4 @@ gooci:
   ext-public-https-only: true
   ai-hub-local-forward: ${GOOCI_AI_HUB_LOCAL_FORWARD:true}
   ai-hub-url: ${GOOCI_AI_HUB_URL:}
+  ai-hub-token: ${GOOCI_AI_HUB_TOKEN:}

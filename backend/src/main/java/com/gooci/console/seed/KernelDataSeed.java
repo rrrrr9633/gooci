@@ -332,7 +332,7 @@ public class KernelDataSeed implements ApplicationRunner {
     private void bindAiHub(String operatorId) {
         String raw = aiHubUrl == null ? "" : aiHubUrl.trim();
         if (raw.isBlank() && aiHubLocalForward) {
-            raw = "http://127.0.0.1:8787";
+            raw = "http://127.0.0.1:3080";
         }
         String target = null;
         if (!raw.isBlank() && ExtTargetSupport.denyReason(raw, targetPolicy, aiHubLocalForward) == null) {

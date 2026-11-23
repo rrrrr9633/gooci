@@ -3,7 +3,7 @@
     <h2>{{ title }}</h2>
     <p class="ops-lead">
       探活是门口进程去连 TARGET_URL，不是浏览器去连。下一跳必须是允许名单里的公网 https，本机回环和内网地址已停用。
-      模块放在其他云服务器，安全组只放行门口。AI 中台同一条路，运行时是 deepseek-harness，不在本机起进程。
+      模块放在其他云服务器，安全组只放行门口。AI 中台界面是 deepseek-harness，现在同机转到 127.0.0.1:3080。
     </p>
     <div class="ops-toolbar">
       <el-button type="primary" @click="openImplant">植入模块</el-button>

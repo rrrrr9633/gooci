@@ -17,11 +17,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Duration;
+import java.util.Base64;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Locale;
@@ -47,16 +50,19 @@ public class ModuleShellController {
     private final HttpClient httpClient;
     private final ExtTargetSupport.Policy targetPolicy;
     private final boolean aiHubLocalForward;
+    private final String aiHubToken;
 
     public ModuleShellController(
             AppOpenMapper appOpenMapper,
             @Value("${gooci.ext-allow-hosts:}") String allowHosts,
             @Value("${gooci.ext-public-https-only:false}") boolean publicHttpsOnly,
-            @Value("${gooci.ai-hub-local-forward:false}") boolean aiHubLocalForward) {
+            @Value("${gooci.ai-hub-local-forward:false}") boolean aiHubLocalForward,
+            @Value("${gooci.ai-hub-token:}") String aiHubToken) {
         this.appOpenMapper = appOpenMapper;
         this.httpClient = ExtTargetSupport.httpClient(Duration.ofSeconds(5));
         this.targetPolicy = ExtTargetSupport.policy(allowHosts, publicHttpsOnly);
         this.aiHubLocalForward = aiHubLocalForward;
+        this.aiHubToken = aiHubToken == null ? "" : aiHubToken.trim();
     }
 
     @RequestMapping({"/ext/{appCode}", "/ext/{appCode}/", "/ext/{appCode}/**"})
@@ -69,6 +75,14 @@ public class ModuleShellController {
         }
         if (open.getTargetUrl() != null && !open.getTargetUrl().isBlank()) {
             String target = joinTarget(open.getTargetUrl().trim(), extraPath(request, appCode), request.getQueryString());
+            if (ExtWsTunnel.websocket(request.getHeader("Upgrade"))) {
+                String error = tunnel(open, target, request, response);
+                if (error == null) {
+                    return;
+                }
+                writeHtml(response, HttpServletResponse.SC_BAD_GATEWAY, downHtml(open, error));
+                return;
+            }
             String error = proxy(open, target, request, response);
             if (error == null) {
                 return;
@@ -148,6 +162,164 @@ public class ModuleShellController {
         return aiHubLocalForward && open != null && AiFamily.HUB.equals(open.getAppCode());
     }
 
+    private void copyInbound(HttpServletRequest inbound, HttpRequest.Builder builder) {
+        Enumeration<String> names = inbound.getHeaderNames();
+        while (names != null && names.hasMoreElements()) {
+            String name = names.nextElement();
+            if (name == null || name.toLowerCase(Locale.ROOT).startsWith("x-gooci-")) {
+                continue;
+            }
+            if (ExtTargetSupport.skipRequestHeader(name) && !"cookie".equalsIgnoreCase(name)) {
+                continue;
+            }
+            Enumeration<String> values = inbound.getHeaders(name);
+            while (values.hasMoreElements()) {
+                try {
+                    builder.header(name, values.nextElement());
+                } catch (IllegalArgumentException ignored) {
+                    // Java HttpClient 拒绝部分 hop-by-hop 头，跳过即可
+                }
+            }
+        }
+    }
+
+    private void stampDoor(AppOpen open, HttpServletRequest inbound, HttpRequest.Builder builder) {
+        builder.header("X-Gooci-Enter-Id", open.getTsEnterId() == null ? "" : open.getTsEnterId());
+        builder.header("X-Gooci-App-Code", open.getAppCode() == null ? "" : open.getAppCode());
+        builder.header("X-Gooci-Door", "console");
+        String fn = inbound.getParameter("fn");
+        if (AiFamily.function(fn)) {
+            builder.header("X-Gooci-Fn", fn.trim());
+        }
+    }
+
+    private boolean indexPath(URI uri) {
+        String path = uri.getPath();
+        return path == null || path.isBlank() || "/".equals(path) || "/index.html".equals(path);
+    }
+
+    private String withLaunchToken(String targetUrl) {
+        if (aiHubToken.isBlank() || targetUrl.contains("token=")) {
+            return targetUrl;
+        }
+        return targetUrl + (targetUrl.contains("?") ? "&" : "?") + "token=" + URLEncoder.encode(aiHubToken, StandardCharsets.UTF_8);
+    }
+
+    private String tunnel(AppOpen open, String targetUrl, HttpServletRequest inbound, HttpServletResponse outbound) {
+        if (targetUrl == null || targetUrl.isBlank()) {
+            return "目标地址为空";
+        }
+        URI uri;
+        try {
+            uri = URI.create(targetUrl);
+        } catch (IllegalArgumentException ex) {
+            return "目标地址不是合法 URL";
+        }
+        String deny = ExtTargetSupport.denyReason(targetUrl, targetPolicy, localForward(open));
+        if (deny != null) {
+            return deny;
+        }
+        String key = inbound.getHeader("Sec-WebSocket-Key");
+        if (key == null || key.isBlank()) {
+            return "缺少 WebSocket Key";
+        }
+        String path = uri.getRawPath() == null || uri.getRawPath().isBlank() ? "/" : uri.getRawPath();
+        String query = uri.getRawQuery();
+        StringBuilder head = new StringBuilder();
+        head.append("GET ").append(path);
+        if (query != null && !query.isBlank()) {
+            head.append('?').append(query);
+        }
+        head.append(" HTTP/1.1\r\n");
+        head.append("Host: ").append(uri.getHost());
+        if (uri.getPort() > 0) {
+            head.append(':').append(uri.getPort());
+        }
+        head.append("\r\n");
+        head.append("Upgrade: websocket\r\n");
+        head.append("Connection: Upgrade\r\n");
+        head.append("Sec-WebSocket-Key: ").append(key.trim()).append("\r\n");
+        head.append("Sec-WebSocket-Version: 13\r\n");
+        String protocol = inbound.getHeader("Sec-WebSocket-Protocol");
+        if (protocol != null && !protocol.isBlank()) {
+            head.append("Sec-WebSocket-Protocol: ").append(protocol.trim()).append("\r\n");
+        }
+        String extensions = inbound.getHeader("Sec-WebSocket-Extensions");
+        if (extensions != null && !extensions.isBlank()) {
+            head.append("Sec-WebSocket-Extensions: ").append(extensions.trim()).append("\r\n");
+        }
+        String cookie = inbound.getHeader("Cookie");
+        if (cookie != null && !cookie.isBlank()) {
+            head.append("Cookie: ").append(cookie).append("\r\n");
+        }
+        head.append("X-Gooci-Enter-Id: ").append(open.getTsEnterId() == null ? "" : open.getTsEnterId()).append("\r\n");
+        head.append("X-Gooci-App-Code: ").append(open.getAppCode() == null ? "" : open.getAppCode()).append("\r\n");
+        head.append("X-Gooci-Door: console\r\n");
+        String fn = inbound.getParameter("fn");
+        if (AiFamily.function(fn)) {
+            head.append("X-Gooci-Fn: ").append(fn.trim()).append("\r\n");
+        }
+        head.append("\r\n");
+        ExtWsTunnel.Handshake upstream = null;
+        try {
+            upstream = ExtWsTunnel.handshake(uri.getScheme(), uri.getHost(), uri.getPort(), head.toString());
+            String accept = Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-1")
+                    .digest((key.trim() + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").getBytes(StandardCharsets.ISO_8859_1)));
+            outbound.setStatus(101);
+            outbound.setHeader("Upgrade", "websocket");
+            outbound.setHeader("Connection", "Upgrade");
+            outbound.setHeader("Sec-WebSocket-Accept", accept);
+            String chosenProtocol = headerValue(upstream.head, "Sec-WebSocket-Protocol");
+            String chosenExtensions = headerValue(upstream.head, "Sec-WebSocket-Extensions");
+            if (chosenProtocol != null) {
+                outbound.setHeader("Sec-WebSocket-Protocol", chosenProtocol);
+            }
+            if (chosenExtensions != null) {
+                outbound.setHeader("Sec-WebSocket-Extensions", chosenExtensions);
+            }
+            ExtWsTunnel.arm(upstream.socket);
+            inbound.upgrade(ExtWsTunnel.class);
+            upstream = null;
+            return null;
+        } catch (Exception ex) {
+            if (upstream != null) {
+                try {
+                    upstream.socket.close();
+                } catch (IOException ignored) {
+                    // 升级失败时丢掉半开套接字
+                }
+            }
+            ExtWsTunnel.clear();
+            String message = ex.getMessage();
+            return message == null || message.isBlank() ? ex.getClass().getSimpleName() : message;
+        }
+    }
+
+    private String headerValue(String head, String name) {
+        if (head == null) {
+            return null;
+        }
+        String prefix = name.toLowerCase(Locale.ROOT) + ":";
+        for (String line : head.split("\r\n")) {
+            if (line.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                String value = line.substring(name.length() + 1).trim();
+                return value.isBlank() ? null : value;
+            }
+        }
+        return null;
+    }
+
+    private String rewriteSetCookie(String appCode, String value) {
+        if (value == null || value.isBlank()) {
+            return value;
+        }
+        String prefix = shellPrefix(appCode);
+        if (value.toLowerCase(Locale.ROOT).contains("path=" + prefix.toLowerCase(Locale.ROOT))) {
+            return value;
+        }
+        return value.replaceAll("(?i);\\s*Path=/", "; Path=" + prefix + "/");
+    }
+
     private String proxy(AppOpen open, String targetUrl, HttpServletRequest inbound, HttpServletResponse outbound)
             throws IOException {
         if (targetUrl == null || targetUrl.isBlank()) {
@@ -174,31 +346,21 @@ public class ModuleShellController {
         HttpRequest.Builder builder = HttpRequest.newBuilder(uri)
                 .timeout(Duration.ofSeconds(60))
                 .method(method, publisher);
-        Enumeration<String> names = inbound.getHeaderNames();
-        while (names != null && names.hasMoreElements()) {
-            String name = names.nextElement();
-            if (name == null || ExtTargetSupport.skipRequestHeader(name) || name.toLowerCase(Locale.ROOT).startsWith("x-gooci-")) {
-                continue;
-            }
-            Enumeration<String> values = inbound.getHeaders(name);
-            while (values.hasMoreElements()) {
-                String value = values.nextElement();
-                try {
-                    builder.header(name, value);
-                } catch (IllegalArgumentException ignored) {
-                    // Java HttpClient 拒绝部分 hop-by-hop 头，跳过即可
-                }
-            }
-        }
-        builder.header("X-Gooci-Enter-Id", open.getTsEnterId() == null ? "" : open.getTsEnterId());
-        builder.header("X-Gooci-App-Code", open.getAppCode() == null ? "" : open.getAppCode());
-        builder.header("X-Gooci-Door", "console");
-        String fn = inbound.getParameter("fn");
-        if (AiFamily.function(fn)) {
-            builder.header("X-Gooci-Fn", fn.trim());
-        }
+        copyInbound(inbound, builder);
+        stampDoor(open, inbound, builder);
         try {
             HttpResponse<byte[]> remote = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofByteArray());
+            if (remote.statusCode() == 401 && indexPath(uri) && AiFamily.HUB.equals(open.getAppCode()) && !aiHubToken.isBlank()) {
+                String retryUrl = withLaunchToken(targetUrl);
+                if (retryUrl != null && !retryUrl.equals(targetUrl)) {
+                    HttpRequest.Builder again = HttpRequest.newBuilder(URI.create(retryUrl))
+                            .timeout(Duration.ofSeconds(60))
+                            .method(method, publisher);
+                    copyInbound(inbound, again);
+                    stampDoor(open, inbound, again);
+                    remote = httpClient.send(again.build(), HttpResponse.BodyHandlers.ofByteArray());
+                }
+            }
             outbound.setStatus(remote.statusCode());
             String contentType = remote.headers().firstValue("Content-Type").orElse(MediaType.APPLICATION_OCTET_STREAM_VALUE);
             outbound.setContentType(contentType);
@@ -209,6 +371,8 @@ public class ModuleShellController {
                 for (String value : values) {
                     if ("location".equalsIgnoreCase(header)) {
                         outbound.setHeader(header, rewriteLocation(open, targetUrl, value));
+                    } else if ("set-cookie".equalsIgnoreCase(header)) {
+                        outbound.addHeader(header, rewriteSetCookie(open.getAppCode(), value));
                     } else {
                         outbound.addHeader(header, value);
                     }
@@ -290,10 +454,14 @@ public class ModuleShellController {
                 + "if(u.charAt(0)==='/'&&u.charAt(1)!=='/'&&u.indexOf(p)!==0)return p+u;"
                 + "try{var x=new URL(u,location.href);if(x.origin===location.origin&&x.pathname.indexOf(p)!==0)"
                 + "{return p+x.pathname+x.search+x.hash;}}catch(e){}return u;}"
-                + "var f=window.fetch;window.fetch=function(i,n){if(typeof i==='string')i=fix(i);"
-                + "else if(i&&i.url)i=new Request(fix(i.url),i);return f.call(this,i,n);};"
+                + "var fn=(new URLSearchParams(location.search).get('fn'))||'';"
+                + "function withFn(u){if(!fn||typeof u!=='string')return u;try{var x=new URL(u,location.href);"
+                + "if(x.origin===location.origin&&x.pathname.indexOf(p)===0&&!x.searchParams.has('fn')){"
+                + "x.searchParams.set('fn',fn);return x.pathname+x.search+x.hash;}}catch(e){}return u;}"
+                + "var f=window.fetch;window.fetch=function(i,n){if(typeof i==='string')i=withFn(fix(i));"
+                + "else if(i&&i.url)i=new Request(withFn(fix(i.url)),i);return f.call(this,i,n);};"
                 + "var o=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u){"
-                + "arguments[1]=fix(u);return o.apply(this,arguments);};"
+                + "arguments[1]=withFn(fix(u));return o.apply(this,arguments);};"
                 + "var sa=Element.prototype.setAttribute;Element.prototype.setAttribute=function(n,v){"
                 + "if((n==='src'||n==='href')&&typeof v==='string')v=fix(v);return sa.call(this,n,v);};"
                 + "function patch(proto,prop){var d=Object.getOwnPropertyDescriptor(proto,prop);if(!d||!d.set)return;"
@@ -303,8 +471,9 @@ public class ModuleShellController {
                 + "if(window.HTMLIFrameElement)patch(HTMLIFrameElement.prototype,'src');"
                 + "if(window.WebSocket){var W=window.WebSocket;window.WebSocket=function(u,r){"
                 + "if(typeof u==='string'){try{var x=new URL(u,location.href);"
-                + "if(same(u)&&x.pathname.indexOf(p)!==0){"
-                + "u=(location.protocol==='https:'?'wss:':'ws:')+'//'+location.host+p+x.pathname+x.search;}"
+                + "if(same(u)&&x.pathname.indexOf(p)!==0){x.pathname=p+x.pathname;}"
+                + "if(fn&&x.pathname.indexOf(p)===0&&!x.searchParams.has('fn'))x.searchParams.set('fn',fn);"
+                + "if(same(u)){u=(location.protocol==='https:'?'wss:':'ws:')+'//'+location.host+x.pathname+x.search;}"
                 + "}catch(e){}}return r===undefined?new W(u):new W(u,r);};window.WebSocket.prototype=W.prototype;}"
                 + "})();</script>";
         String inject = map + hook;
