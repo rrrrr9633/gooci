@@ -33,7 +33,7 @@ npm install && npm run dev
 
 - 官网：http://127.0.0.1:5173/
 - 演示账号：`admin` / `GooCi@2026`
-- 模块下一跳必须是允许名单内的公网 https，由门口 `/ext/{appCode}` 转发。AI 功能共用 `AI_HUB`：工作台砖块带 `fn` 直达对应功能，不带 `fn` 时在中台里选。测试档 `local` 把 AI 中台转到 `http://127.0.0.1:8787`（`dsh --profile web --port 8787`）；生产仍禁止回环。
+- 模块下一跳必须是允许名单内的公网 https，由门口 `/ext/{appCode}` 转发。AI 功能共用 `AI_HUB`。现在控制台和 `ai-hub` 部署在同一台云服务器，`node server.mjs` 只听 `127.0.0.1:8787`，并用 `GOOCI_AI_HUB_LOCAL_FORWARD=true` 只放行这一条。以后 ai-hub 挪到被转发的云，关掉该开关，下一跳改为那台机器的公网 https。
 - 接口文档：打开 `docs/index.html`（Markdown 原稿仍在同目录）
 
 ### 可选：Docker MySQL
