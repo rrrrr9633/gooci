@@ -50,13 +50,16 @@ public class BizAppServiceImpl implements BizAppService {
             AppRoleMapper appRoleMapper,
             UserAppGrantMapper userAppGrantMapper,
             @Value("${gooci.ext-allow-hosts:}") String allowHosts,
+            @Value("${gooci.ext-public-https-only:true}") boolean publicHttpsOnly,
             @Value("${gooci.ai-hub-public-url:}") String aiHubPublicUrl) {
         this.sysUserMapper = sysUserMapper;
         this.appOpenMapper = appOpenMapper;
         this.appRoleMapper = appRoleMapper;
         this.userAppGrantMapper = userAppGrantMapper;
-        this.targetPolicy = ExtTargetSupport.policy(allowHosts, true);
-        this.aiHubPublicUrl = aiHubPublicUrl == null ? "" : aiHubPublicUrl.trim();
+        this.targetPolicy = ExtTargetSupport.policy(allowHosts, publicHttpsOnly);
+        String configuredAiUrl = aiHubPublicUrl == null ? "" : aiHubPublicUrl.trim();
+        this.aiHubPublicUrl = ExtTargetSupport.denyReason(configuredAiUrl, targetPolicy) == null
+                ? configuredAiUrl : "";
     }
 
     @Override

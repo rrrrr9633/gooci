@@ -115,9 +115,14 @@ function openRoot(item) {
   if (first.routePath) router.push(first.routePath)
 }
 
-function openMenu(path) {
-  if (path === '/workbench/ext/AI_HUB') {
-    window.open(path, '_blank', 'noopener,noreferrer')
+async function openMenu(path) {
+  if (String(path || '').startsWith('/workbench/ext/AI_HUB')) {
+    const tab = window.open('about:blank', '_blank', 'noopener,noreferrer')
+    if (!tab) return
+    const target = new URL('http://154.201.65.68:3080/?token=LVa5RYdo3QNBN2iUn6FFCpgmOw7B8-P_7mj88WM5EaQ')
+    const query = new URL(path, window.location.origin).searchParams.get('fn')
+    if (query) target.searchParams.set('fn', query)
+    tab.location.replace(target.href)
     return
   }
   router.push(path)

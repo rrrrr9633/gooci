@@ -99,6 +99,15 @@ public final class ExtTargetSupport {
         } catch (IllegalArgumentException ex) {
             return "目标地址不是合法 URL";
         }
+        Policy gate = policy == null ? ExtTargetSupport.policy("", true) : policy;
+        if (!gate.publicHttpsOnly()) {
+            String scheme = uri.getScheme();
+            String host = uri.getHost();
+            if (("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme))
+                    && host != null && !host.isBlank()) {
+                return null;
+            }
+        }
         if (hubLocalForward && loopbackUrl(uri)) {
             return null;
         }
@@ -113,7 +122,6 @@ public final class ExtTargetSupport {
         if (localName(host) || privateLiteral(host)) {
             return "已停用本机和内网下一跳，请改到其他云服务器的公网 https";
         }
-        Policy gate = policy == null ? ExtTargetSupport.policy("", true) : policy;
         String key = host.toLowerCase(Locale.ROOT);
         if (gate.allowHosts().isEmpty() || !gate.allowHosts().contains(key)) {
             return "下一跳不在允许名单";

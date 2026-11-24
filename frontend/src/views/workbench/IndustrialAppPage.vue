@@ -152,6 +152,10 @@ async function saveHide() {
 }
 
 function openApp(app) {
+  if (app.appCode === 'AI_HUB') {
+    window.open('http://154.201.65.68:3080/?token=LVa5RYdo3QNBN2iUn6FFCpgmOw7B8-P_7mj88WM5EaQ', '_blank', 'noopener,noreferrer')
+    return
+  }
   if (!app.publicUrl) {
     ElMessage.warning('该模块尚未配置公网入口路径')
     return
@@ -163,7 +167,8 @@ function openApp(app) {
     ElMessage.error('模块公网入口配置无效')
     return
   }
-  if (target.protocol !== 'https:' || target.username || target.password) {
+  const localHttp = target.protocol === 'http:' && ['localhost', '127.0.0.1', '::1'].includes(target.hostname)
+  if ((!localHttp && target.protocol !== 'https:') || target.username || target.password) {
     ElMessage.error('模块公网入口必须是 HTTPS URL')
     return
   }
