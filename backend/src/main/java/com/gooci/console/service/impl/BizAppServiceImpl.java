@@ -2,6 +2,8 @@ package com.gooci.console.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.gooci.console.common.BusinessException;
+import com.gooci.console.common.AiFamily;
+import com.gooci.console.common.ExtTargetSupport;
 import com.gooci.console.domain.AppOpen;
 import com.gooci.console.domain.AppRole;
 import com.gooci.console.domain.SysUser;
@@ -17,6 +19,7 @@ import com.gooci.console.web.dto.BizAppHideItem;
 import com.gooci.console.web.dto.BizAppTileView;
 import com.gooci.console.web.dto.SaveBizAppAdminCommand;
 import com.gooci.console.web.dto.SaveBizAppHideCommand;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,16 +41,22 @@ public class BizAppServiceImpl implements BizAppService {
     private final AppOpenMapper appOpenMapper;
     private final AppRoleMapper appRoleMapper;
     private final UserAppGrantMapper userAppGrantMapper;
+    private final ExtTargetSupport.Policy targetPolicy;
+    private final String aiHubPublicUrl;
 
     public BizAppServiceImpl(
             SysUserMapper sysUserMapper,
             AppOpenMapper appOpenMapper,
             AppRoleMapper appRoleMapper,
-            UserAppGrantMapper userAppGrantMapper) {
+            UserAppGrantMapper userAppGrantMapper,
+            @Value("${gooci.ext-allow-hosts:}") String allowHosts,
+            @Value("${gooci.ai-hub-public-url:}") String aiHubPublicUrl) {
         this.sysUserMapper = sysUserMapper;
         this.appOpenMapper = appOpenMapper;
         this.appRoleMapper = appRoleMapper;
         this.userAppGrantMapper = userAppGrantMapper;
+        this.targetPolicy = ExtTargetSupport.policy(allowHosts, true);
+        this.aiHubPublicUrl = aiHubPublicUrl == null ? "" : aiHubPublicUrl.trim();
     }
 
     @Override
@@ -152,6 +161,11 @@ public class BizAppServiceImpl implements BizAppService {
             tile.setAppCode(open.getAppCode());
             tile.setAppName(open.getAppName());
             tile.setEntryPath(open.getEntryPath());
+            String target = open.getTargetUrl();
+            String publicUrl = AiFamily.HUB.equals(open.getAppCode()) || AiFamily.function(open.getAppCode())
+                    ? aiHubPublicUrl
+                    : ExtTargetSupport.denyReason(target, targetPolicy) == null ? target : "";
+            tile.setPublicUrl(publicUrl);
             tile.setHideFlag("1".equals(open.getHideFlag()) ? "1" : "0");
             board.getApps().add(tile);
         }

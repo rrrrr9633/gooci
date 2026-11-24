@@ -44,6 +44,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import http from '../../api/http'
 import AppMark from '../../components/AppMark.vue'
@@ -57,11 +58,24 @@ const basicApps = computed(() => apps.value.filter((app) => !AI_CODES.has(app.ap
 const aiApps = computed(() => apps.value.filter((app) => AI_CODES.has(app.appCode)))
 
 function openApp(app) {
-  if (!app.entryPath) return
-  const url = AI_CODES.has(app.appCode)
-    ? app.entryPath
-    : `/ext/${encodeURIComponent(app.appCode)}/`
-  window.open(url, '_blank', 'noopener,noreferrer')
+  if (!app.publicUrl) {
+    ElMessage.warning('该模块尚未配置公网入口路径')
+    return
+  }
+  let target
+  try {
+    target = new URL(app.publicUrl)
+  } catch {
+    ElMessage.error('模块公网入口配置无效')
+    return
+  }
+  if (target.protocol !== 'https:' || target.username || target.password) {
+    ElMessage.error('模块公网入口必须是 HTTPS URL')
+    return
+  }
+  if (AI_CODES.has(app.appCode) && app.appCode !== 'AI_HUB') target.searchParams.set('fn', app.appCode)
+  const tab = window.open(target.href, '_blank', 'noopener,noreferrer')
+  if (!tab) ElMessage.warning('浏览器拦截了新页面，请允许此站点弹出窗口')
 }
 
 onMounted(async () => {

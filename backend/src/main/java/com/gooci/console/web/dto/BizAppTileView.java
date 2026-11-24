@@ -19,5 +19,7 @@ public class BizAppTileView {
 
     private String entryPath;
 
+    private String publicUrl;
+
     private String hideFlag;
 }
