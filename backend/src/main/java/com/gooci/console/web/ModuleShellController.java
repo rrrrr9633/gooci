@@ -504,7 +504,7 @@ public class ModuleShellController {
 
     private String rewriteQuotedVitePaths(String prefix, String text) {
         Pattern quoted = Pattern.compile(
-                "(['\"])(/(?:@vite|@react-refresh|@fs|@id|src/|node_modules/|assets/|plugins/|static/)[^'\"]*)\\1");
+                "(['\"])(/(?:@vite|@react-refresh|@fs|@id|src/|node_modules/|assets/|plugins/|static/|open-in-app/|api(?:/[^'\"]*)?|__boot__)[^'\"]*)\\1");
         Matcher matcher = quoted.matcher(text);
         StringBuffer out = new StringBuffer();
         while (matcher.find()) {
@@ -527,7 +527,8 @@ public class ModuleShellController {
                 || type.contains("text/css")
                 || type.contains("javascript")
                 || type.contains("ecmascript")
-                || type.contains("typescript");
+                || type.contains("typescript")
+                || type.contains("application/json");
     }
 
     private String shellPrefix(String appCode) {
