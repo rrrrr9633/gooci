@@ -26,13 +26,20 @@ const frameSrc = computed(() => `/ext/${encodeURIComponent(appCode.value)}/`)
 const emptyText = computed(() => {
   if (appCode.value === 'AI_HUB' && !hub.value) return '正在打开 AI 中台'
   if (appCode.value === 'AI_HUB' && !hub.value.bound) return hub.value.deny || 'AI中台尚未绑定'
+  if (appCode.value === 'AI_HUB' && !hub.value.launchUrl) return '尚未配置 AI 中台公网入口'
   if (!ok.value) return '该模块尚未植入入口'
   return '正在打开模块'
 })
 
 function openAiHub() {
-  if (!hub.value?.bound) return
-  const target = new URL(hub.value.framePath || '/ext/AI_HUB/', window.location.origin)
+  if (!hub.value?.bound || !hub.value.launchUrl) return
+  let target
+  try {
+    target = new URL(hub.value.launchUrl)
+  } catch {
+    return
+  }
+  if (target.protocol !== 'https:' || target.username || target.password) return
   if (fn.value) target.searchParams.set('fn', fn.value)
   window.location.replace(target.href)
 }

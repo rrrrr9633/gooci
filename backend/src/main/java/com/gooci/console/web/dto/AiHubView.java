@@ -8,7 +8,7 @@ import java.util.List;
 
 /**
  * @ClassName AiHubView
- * @Description AI 中台绑定。浏览器只拿同域路径，不拿云上原始地址
+ * @Description AI 中台绑定。浏览器只拿公开的 harness 入口，不拿内部下一跳
  * @author GooCi
  * @date 2026-03-26
  */
@@ -23,6 +23,8 @@ public class AiHubView {
     private String profile;
 
     private String framePath;
+
+    private String launchUrl;
 
     private boolean bound;
 

@@ -36,3 +36,4 @@ gooci:
   ai-hub-local-forward: ${GOOCI_AI_HUB_LOCAL_FORWARD:false}
   ai-hub-url: ${GOOCI_AI_HUB_URL:}
   ai-hub-token: ${GOOCI_AI_HUB_TOKEN:}
+  ai-hub-public-url: ${GOOCI_AI_HUB_PUBLIC_URL:}
