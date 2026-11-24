@@ -57,7 +57,11 @@ const basicApps = computed(() => apps.value.filter((app) => !AI_CODES.has(app.ap
 const aiApps = computed(() => apps.value.filter((app) => AI_CODES.has(app.appCode)))
 
 function openApp(app) {
-  if (app.entryPath) router.push(app.entryPath)
+  if (!app.entryPath) return
+  const url = AI_CODES.has(app.appCode)
+    ? app.entryPath
+    : `/ext/${encodeURIComponent(app.appCode)}/`
+  window.open(url, '_blank', 'noopener,noreferrer')
 }
 
 onMounted(async () => {

@@ -90,13 +90,11 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import http from '../../api/http'
 import OrgPager from '../../components/OrgPager.vue'
 import AppMark from '../../components/AppMark.vue'
 
-const router = useRouter()
 const board = ref({ apps: [] })
 const editing = ref(false)
 const saving = ref(false)
@@ -155,7 +153,10 @@ async function saveHide() {
 
 function openApp(app) {
   if (!app.entryPath) return
-  router.push(app.entryPath)
+  const url = AI_CODES.has(app.appCode)
+    ? app.entryPath
+    : `/ext/${encodeURIComponent(app.appCode)}/`
+  window.open(url, '_blank', 'noopener,noreferrer')
 }
 
 async function openAdmin(app) {

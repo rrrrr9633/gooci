@@ -1,7 +1,6 @@
 <template>
   <div class="org-ext-page org-ext-fill">
-    <iframe v-if="showFrame" class="org-ext-frame" :src="frameSrc" title="外接模块"></iframe>
-    <div v-else class="org-app-empty">{{ emptyText }}</div>
+    <div class="org-app-empty">{{ emptyText }}</div>
   </div>
 </template>
 
@@ -21,8 +20,6 @@ const fn = computed(() => {
 })
 const current = computed(() => (board.value.apps || []).find((app) => app.appCode === appCode.value))
 const ok = computed(() => Boolean(current.value?.entryPath))
-const showFrame = computed(() => appCode.value !== 'AI_HUB' && ok.value)
-const frameSrc = computed(() => `/ext/${encodeURIComponent(appCode.value)}/`)
 const emptyText = computed(() => {
   if (appCode.value === 'AI_HUB' && !hub.value) return '正在打开 AI 中台'
   if (appCode.value === 'AI_HUB' && !hub.value.bound) return hub.value.deny || 'AI中台尚未绑定'
@@ -36,10 +33,10 @@ function openAiHub() {
   let target
   try {
     target = new URL(hub.value.launchUrl)
+    if (target.protocol !== 'https:' || target.username || target.password) return
   } catch {
     return
   }
-  if (target.protocol !== 'https:' || target.username || target.password) return
   if (fn.value) target.searchParams.set('fn', fn.value)
   window.location.replace(target.href)
 }
