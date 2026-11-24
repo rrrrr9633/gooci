@@ -18,6 +18,6 @@
 
 AI 中台界面就是 deepseek-harness，不要再写一页。现在和项目部署在同一台云服务器，在 harness 目录执行 `dsh web --host 127.0.0.1 --port 3080 --no-open`。把打印行里的 `token` 填进 `GOOCI_AI_HUB_TOKEN`，这台云再设 `GOOCI_AI_HUB_LOCAL_FORWARD=true` 并重启控制台。门口只放行 AI 中台这条回环，其它模块仍拒绝。不要在开发机启动。以后挪到被转发的云时，关掉这个开关，下一跳改成那台机器的公网 https。
 
-工作台砖块入口是 `/workbench/ext/AI_HUB?fn={功能编码}`，页内就是 harness。不带 `fn` 时也是同一套 harness 界面。
+工作台砖块入口是 `/workbench/ext/AI_HUB?fn={功能编码}`，确认绑定后顶层跳转到 `/ext/AI_HUB/`，不嵌入 iframe；不带 `fn` 时打开 harness 默认页。
 
 安全组只放行门口。库和文件不要对公网开放。
