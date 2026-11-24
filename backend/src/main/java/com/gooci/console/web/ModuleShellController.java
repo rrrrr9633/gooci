@@ -497,14 +497,14 @@ public class ModuleShellController {
     }
 
     private String rewriteAssetPaths(String prefix, String text) {
-        Pattern path = Pattern.compile("(?<!" + Pattern.quote(prefix)
-                + ")(/(?:assets/|src/|static/|node_modules/|@vite|@fs|@id|@react-refresh|favicon\\.ico))");
+        Pattern path = Pattern.compile("(?<!\\.)(?<!" + Pattern.quote(prefix)
+                + ")(/(?:assets/|plugins/|src/|static/|node_modules/|@vite|@fs|@id|@react-refresh|favicon\\.ico))");
         return path.matcher(text).replaceAll(Matcher.quoteReplacement(prefix) + "$1");
     }
 
     private String rewriteQuotedVitePaths(String prefix, String text) {
         Pattern quoted = Pattern.compile(
-                "(['\"])(/(?:@vite|@react-refresh|@fs|@id|src/|node_modules/|assets/|static/)[^'\"]*)\\1");
+                "(['\"])(/(?:@vite|@react-refresh|@fs|@id|src/|node_modules/|assets/|plugins/|static/)[^'\"]*)\\1");
         Matcher matcher = quoted.matcher(text);
         StringBuffer out = new StringBuffer();
         while (matcher.find()) {
