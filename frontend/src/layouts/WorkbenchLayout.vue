@@ -23,7 +23,7 @@
             v-if="rootMenus.length"
             :default-active="route.path"
             :default-openeds="opened"
-            router
+            @select="openMenu"
             class="tree"
           >
             <el-sub-menu v-for="item in rootMenus" :key="item.menuCode" :index="item.menuCode">
@@ -113,6 +113,14 @@ function openRoot(item) {
   activeRoot.value = item.menuCode
   const first = item.children?.[0] || item
   if (first.routePath) router.push(first.routePath)
+}
+
+function openMenu(path) {
+  if (path === '/workbench/ext/AI_HUB') {
+    window.open(path, '_blank', 'noopener,noreferrer')
+    return
+  }
+  router.push(path)
 }
 
 function syncRootByPath() {
