@@ -1,0 +1,8 @@
+name: gooci-local
+services:
+  api:
+    environment:
+      GOOCI_DELIVERY_EDITION: local
+  web:
+    ports:
+      - "${GOOCI_BIND_IP:-127.0.0.1}:8080:8080"

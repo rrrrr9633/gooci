@@ -69,6 +69,9 @@ public class KernelDataSeed implements ApplicationRunner {
     private final OpsUserMapper opsUserMapper;
     private final PasswordEncoder passwordEncoder;
     private final String aiHubUrl;
+    private final boolean delivery;
+    private final String adminPassword;
+    private final String opsPassword;
     private final boolean aiHubLocalForward;
     private final ExtTargetSupport.Policy targetPolicy;
 
@@ -104,7 +107,10 @@ public class KernelDataSeed implements ApplicationRunner {
             PasswordEncoder passwordEncoder,
             @Value("${gooci.ai-hub-url:}") String aiHubUrl,
             @Value("${gooci.ai-hub-local-forward:false}") boolean aiHubLocalForward,
-            @Value("${gooci.ext-allow-hosts:}") String allowHosts) {
+            @Value("${gooci.ext-allow-hosts:}") String allowHosts,
+            @Value("${gooci.delivery:false}") boolean delivery,
+            @Value("${gooci.bootstrap-admin-password:}") String adminPassword,
+            @Value("${gooci.bootstrap-ops-password:}") String opsPassword) {
         this.enterRecordMapper = enterRecordMapper;
         this.sysUserMapper = sysUserMapper;
         this.sysMenuMapper = sysMenuMapper;
@@ -120,6 +126,9 @@ public class KernelDataSeed implements ApplicationRunner {
         this.opsUserMapper = opsUserMapper;
         this.passwordEncoder = passwordEncoder;
         this.aiHubUrl = aiHubUrl;
+        this.delivery = delivery;
+        this.adminPassword = bootstrapPassword(delivery, adminPassword, "GOOCI_BOOTSTRAP_ADMIN_PASSWORD");
+        this.opsPassword = bootstrapPassword(delivery, opsPassword, "GOOCI_BOOTSTRAP_OPS_PASSWORD");
         this.aiHubLocalForward = aiHubLocalForward;
         this.targetPolicy = ExtTargetSupport.policy(allowHosts, true);
     }
@@ -136,9 +145,19 @@ public class KernelDataSeed implements ApplicationRunner {
         retireLocalHops();
         bindAiHub(userId);
         placeAiFunctions(userId);
-        ensureOrgDemo(enterId, userId);
-        ensureStaffDemo(enterId, userId);
+        if (!delivery) {
+            ensureOrgDemo(enterId, userId);
+            ensureStaffDemo(enterId, userId);
+        }
         ensureOpsUser();
+    }
+
+    private static String bootstrapPassword(boolean delivery, String password, String setting) {
+        if (!delivery) return "GooCi@2026";
+        if (password == null || password.trim().length() < 16 || password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
+            throw new IllegalArgumentException(setting + " must contain at least 16 characters and at most 72 UTF-8 bytes");
+        }
+        return password;
     }
 
     private String ensureEnter() {
@@ -205,7 +224,7 @@ public class KernelDataSeed implements ApplicationRunner {
         SysUser user = new SysUser();
         user.setId(UUID.randomUUID().toString());
         user.setLoginName("admin");
-        user.setLoginPassword(passwordEncoder.encode("GooCi@2026"));
+        user.setLoginPassword(passwordEncoder.encode(adminPassword));
         user.setDisplayName("管理员");
         user.setMobile("13800000000");
         user.setRoleName("企业管理员");
@@ -343,6 +362,7 @@ public class KernelDataSeed implements ApplicationRunner {
             ensureOpenApp(enter.getId(), operatorId, AiFamily.HUB, "AI中台", 400, "/workbench/ext/" + AiFamily.HUB, target);
             pinOpen(enter.getId(), AiFamily.HUB, "AI中台", 400, "/workbench/ext/" + AiFamily.HUB);
             ensureAppRole(enter.getId(), operatorId, AiFamily.HUB, "FUNC", "超级管理员", 10);
+            ensureGrant(operatorId, enter.getId(), AiFamily.HUB, "AI中台", "超级管理员", enter.getEnterName());
         }
     }
 
@@ -748,7 +768,7 @@ public class KernelDataSeed implements ApplicationRunner {
         OpsUser ops = new OpsUser();
         ops.setId(UUID.randomUUID().toString());
         ops.setLoginName("ops");
-        ops.setLoginPassword(passwordEncoder.encode("GooCi@2026"));
+        ops.setLoginPassword(passwordEncoder.encode(opsPassword));
         ops.setDisplayName("厂商运营");
         ops.setTsEnterId("OPS");
         fillAudit(ops, "seed");

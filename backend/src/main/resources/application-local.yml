@@ -21,5 +21,5 @@ gooci:
   ext-public-https-only: false
   # 仅测试档。生产档保持 false。AI 中台可转发到本机回环，其它模块仍拒绝。
   ai-hub-local-forward: true
-  ai-hub-url: ${GOOCI_AI_HUB_URL:http://127.0.0.1:3080}
-  ai-hub-public-url: ${GOOCI_AI_HUB_PUBLIC_URL:http://127.0.0.1:3080}
+  ai-hub-url: ${GOOCI_AI_HUB_URL:http://127.0.0.1:8888}
+  ai-hub-public-url: ${GOOCI_AI_HUB_PUBLIC_URL:}

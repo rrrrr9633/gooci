@@ -1,0 +1,10 @@
+name: gooci-cloud
+services:
+  api:
+    environment:
+      GOOCI_EXT_ALLOW_HOSTS: ${GOOCI_EXT_ALLOW_HOSTS:-}
+      GOOCI_DELIVERY_EDITION: cloud
+      GOOCI_CLOUD_DEPLOYMENT_CREDENTIAL_HASHES: ${GOOCI_CLOUD_DEPLOYMENT_CREDENTIAL_HASHES:-}
+  web:
+    ports:
+      - "127.0.0.1:8080:8080"

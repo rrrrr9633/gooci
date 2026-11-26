@@ -30,22 +30,17 @@ public class AiHubServiceImpl implements AiHubService {
     private final AppOpenMapper appOpenMapper;
     private final boolean aiHubLocalForward;
     private final ExtTargetSupport.Policy targetPolicy;
-    private final String aiHubPublicUrl;
 
     public AiHubServiceImpl(
             SysUserMapper sysUserMapper,
             AppOpenMapper appOpenMapper,
             @Value("${gooci.ext-allow-hosts:}") String allowHosts,
             @Value("${gooci.ext-public-https-only:true}") boolean publicHttpsOnly,
-            @Value("${gooci.ai-hub-local-forward:false}") boolean aiHubLocalForward,
-            @Value("${gooci.ai-hub-public-url:}") String aiHubPublicUrl) {
+            @Value("${gooci.ai-hub-local-forward:false}") boolean aiHubLocalForward) {
         this.sysUserMapper = sysUserMapper;
         this.appOpenMapper = appOpenMapper;
         this.aiHubLocalForward = aiHubLocalForward;
         this.targetPolicy = ExtTargetSupport.policy(allowHosts, publicHttpsOnly);
-        String configuredAiUrl = aiHubPublicUrl == null ? "" : aiHubPublicUrl.trim();
-        this.aiHubPublicUrl = ExtTargetSupport.denyReason(configuredAiUrl, targetPolicy) == null
-                ? configuredAiUrl : "";
     }
 
     @Override
@@ -59,7 +54,7 @@ public class AiHubServiceImpl implements AiHubService {
         view.setRuntime("deepseek-harness");
         view.setProfile("web");
         view.setFramePath("/ext/" + APP_CODE + "/");
-        view.setLaunchUrl(aiHubPublicUrl);
+        view.setLaunchUrl("");
         String target = hub == null ? "" : hub.getTargetUrl();
         String deny = ExtTargetSupport.denyReason(target, targetPolicy, aiHubLocalForward);
         view.setBound(deny == null);

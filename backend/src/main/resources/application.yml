@@ -24,7 +24,10 @@ mybatis-plus:
       logic-not-delete-value: "0"
 
 gooci:
-  jwt-secret: gooci-console-dev-secret-change-before-release-2026
+  delivery: ${GOOCI_DELIVERY:false}
+  bootstrap-admin-password: ${GOOCI_BOOTSTRAP_ADMIN_PASSWORD:}
+  bootstrap-ops-password: ${GOOCI_BOOTSTRAP_OPS_PASSWORD:}
+  jwt-secret: ${GOOCI_JWT_SECRET:gooci-console-dev-secret-change-before-release-2026}
   jwt-expire-hours: 12
   service-phone: ""
   ext-demo-url: ""

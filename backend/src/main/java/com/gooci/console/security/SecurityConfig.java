@@ -52,6 +52,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/login", "/api/auth/sms", "/api/auth/register", "/api/site/meta").permitAll()
                         .requestMatchers("/api/ops/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/cloud-launch/redeem").permitAll()
                         .requestMatchers("/ext/**").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())

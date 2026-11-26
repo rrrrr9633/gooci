@@ -51,13 +51,16 @@ public class ModuleShellController {
     private final ExtTargetSupport.Policy targetPolicy;
     private final boolean aiHubLocalForward;
     private final String aiHubToken;
+    private final boolean delivery;
 
     public ModuleShellController(
             AppOpenMapper appOpenMapper,
             @Value("${gooci.ext-allow-hosts:}") String allowHosts,
             @Value("${gooci.ext-public-https-only:false}") boolean publicHttpsOnly,
             @Value("${gooci.ai-hub-local-forward:false}") boolean aiHubLocalForward,
-            @Value("${gooci.ai-hub-token:}") String aiHubToken) {
+            @Value("${gooci.ai-hub-token:}") String aiHubToken,
+            @Value("${gooci.delivery:false}") boolean delivery) {
+        this.delivery = delivery;
         this.appOpenMapper = appOpenMapper;
         this.httpClient = ExtTargetSupport.httpClient(Duration.ofSeconds(5));
         this.targetPolicy = ExtTargetSupport.policy(allowHosts, publicHttpsOnly);
@@ -68,6 +71,10 @@ public class ModuleShellController {
     @RequestMapping({"/ext/{appCode}", "/ext/{appCode}/", "/ext/{appCode}/**"})
     public void open(@PathVariable String appCode, HttpServletRequest request, HttpServletResponse response)
             throws IOException {
+        if (delivery) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
         AppOpen open = findOpen(appCode);
         if (open == null) {
             writeHtml(response, HttpServletResponse.SC_NOT_FOUND, missingHtml(appCode));

@@ -41,25 +41,19 @@ public class BizAppServiceImpl implements BizAppService {
     private final AppOpenMapper appOpenMapper;
     private final AppRoleMapper appRoleMapper;
     private final UserAppGrantMapper userAppGrantMapper;
-    private final ExtTargetSupport.Policy targetPolicy;
-    private final String aiHubPublicUrl;
+    private final com.gooci.console.service.AccountLaunchTargets launchTargets;
 
     public BizAppServiceImpl(
             SysUserMapper sysUserMapper,
             AppOpenMapper appOpenMapper,
             AppRoleMapper appRoleMapper,
             UserAppGrantMapper userAppGrantMapper,
-            @Value("${gooci.ext-allow-hosts:}") String allowHosts,
-            @Value("${gooci.ext-public-https-only:true}") boolean publicHttpsOnly,
-            @Value("${gooci.ai-hub-public-url:}") String aiHubPublicUrl) {
+            com.gooci.console.service.AccountLaunchTargets launchTargets) {
         this.sysUserMapper = sysUserMapper;
         this.appOpenMapper = appOpenMapper;
         this.appRoleMapper = appRoleMapper;
         this.userAppGrantMapper = userAppGrantMapper;
-        this.targetPolicy = ExtTargetSupport.policy(allowHosts, publicHttpsOnly);
-        String configuredAiUrl = aiHubPublicUrl == null ? "" : aiHubPublicUrl.trim();
-        this.aiHubPublicUrl = ExtTargetSupport.denyReason(configuredAiUrl, targetPolicy) == null
-                ? configuredAiUrl : "";
+        this.launchTargets = launchTargets;
     }
 
     @Override
@@ -164,11 +158,7 @@ public class BizAppServiceImpl implements BizAppService {
             tile.setAppCode(open.getAppCode());
             tile.setAppName(open.getAppName());
             tile.setEntryPath(open.getEntryPath());
-            String target = open.getTargetUrl();
-            String publicUrl = AiFamily.HUB.equals(open.getAppCode()) || AiFamily.function(open.getAppCode())
-                    ? aiHubPublicUrl
-                    : ExtTargetSupport.denyReason(target, targetPolicy) == null ? target : "";
-            tile.setPublicUrl(publicUrl);
+            tile.setPublicUrl(launchTargets.resolve(open.getAppCode(), open.getTargetUrl()));
             tile.setHideFlag("1".equals(open.getHideFlag()) ? "1" : "0");
             board.getApps().add(tile);
         }

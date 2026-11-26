@@ -47,6 +47,22 @@ cd ../backend && mvn spring-boot:run -Dspring-boot.run.profiles=mysql
 
 Docker 映射 **13306**，账号 `gooci` / `gooci_pwd`。等容器 healthy 再启后端。
 
+### Docker 交付底座
+
+两个交付清单复用同一组工作台镜像，但使用不同的 Compose 项目和数据库卷。下面是工作台运行方式，不包含 Harness；交付模式默认关闭旧的 `/ext/` 代理。
+
+在仓库根目录准备独立的环境文件，通过 `--env-file` 指定。云版和本地版不要复用密钥或数据库卷。设置 `GOOCI_DB_ROOT_PASSWORD`、`GOOCI_DB_PASSWORD`、`GOOCI_JWT_SECRET`、`GOOCI_BOOTSTRAP_ADMIN_PASSWORD` 和 `GOOCI_BOOTSTRAP_OPS_PASSWORD`。两个初始账号密码至少 16 个字符且不超过 72 个 UTF-8 字节；只在创建账号时生效，不用于重置现有密码。JWT 密钥使用至少 32 字节的独立随机值。
+
+```bash
+# 本地版：默认 http://127.0.0.1:8080
+docker compose --env-file /path/to/local.env -f infra/compose.delivery.yml -f infra/compose.local.yml up -d --build
+
+# 云版：由同机的 HTTPS 入口转发到 127.0.0.1:8080
+docker compose --env-file /path/to/cloud.env -f infra/compose.delivery.yml -f infra/compose.cloud.yml up -d --build
+```
+
+本地版在安装环境文件里设置 `GOOCI_BIND_IP`，然后重新运行同一条 Compose 命令。默认是 `127.0.0.1`；若监听局域网地址，应由安装者配置 HTTPS 入口后再供团队使用。两个版本都不发布数据库端口。云版和本地版在同一台机器上不能同时占用同一监听地址的 `8080`。
+
 ## 目录
 
 ```text

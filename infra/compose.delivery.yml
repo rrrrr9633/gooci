@@ -1,0 +1,46 @@
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${GOOCI_DB_ROOT_PASSWORD:?set GOOCI_DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: gooci
+      MYSQL_USER: gooci
+      MYSQL_PASSWORD: ${GOOCI_DB_PASSWORD:?set GOOCI_DB_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: [CMD-SHELL, 'mysql -h 127.0.0.1 -u"$$MYSQL_USER" --password="$$MYSQL_PASSWORD" "$$MYSQL_DATABASE" -e "SELECT 1" >/dev/null 2>&1']
+      interval: 5s
+      timeout: 3s
+      retries: 30
+  api:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.delivery
+      target: api
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      GOOCI_DELIVERY: 'true'
+      GOOCI_DB_HOST: mysql
+      GOOCI_DB_USER: gooci
+      GOOCI_DB_PASSWORD: ${GOOCI_DB_PASSWORD:?set GOOCI_DB_PASSWORD}
+      GOOCI_JWT_SECRET: ${GOOCI_JWT_SECRET:?set GOOCI_JWT_SECRET}
+      GOOCI_BOOTSTRAP_ADMIN_PASSWORD: ${GOOCI_BOOTSTRAP_ADMIN_PASSWORD:?set GOOCI_BOOTSTRAP_ADMIN_PASSWORD}
+      GOOCI_BOOTSTRAP_OPS_PASSWORD: ${GOOCI_BOOTSTRAP_OPS_PASSWORD:?set GOOCI_BOOTSTRAP_OPS_PASSWORD}
+      GOOCI_AI_HUB_LOCAL_FORWARD: 'false'
+  web:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.delivery
+      target: web
+    restart: unless-stopped
+    depends_on:
+      - api
+
+volumes:
+  mysql-data:

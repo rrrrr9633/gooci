@@ -44,43 +44,20 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import http from '../../api/http'
+import { AI_CODES, openWorkbenchApp } from '../../api/moduleLaunch'
 import AppMark from '../../components/AppMark.vue'
 
 const router = useRouter()
 const board = ref({ apps: [] })
 const todos = ref([])
-const AI_CODES = new Set(['AI_HUB', 'APP_EQKB', 'APP_SAFETY', 'APP_RDKB', 'APP_APS', 'APP_VOUCHER', 'APP_RECON'])
 const apps = computed(() => (board.value.apps || []).filter((app) => app.hideFlag !== '1'))
 const basicApps = computed(() => apps.value.filter((app) => !AI_CODES.has(app.appCode)))
 const aiApps = computed(() => apps.value.filter((app) => AI_CODES.has(app.appCode)))
 
 function openApp(app) {
-  if (app.appCode === 'AI_HUB') {
-    window.open('http://154.201.65.68:3080/?token=LVa5RYdo3QNBN2iUn6FFCpgmOw7B8-P_7mj88WM5EaQ', '_blank', 'noopener,noreferrer')
-    return
-  }
-  if (!app.publicUrl) {
-    ElMessage.warning('该模块尚未配置公网入口路径')
-    return
-  }
-  let target
-  try {
-    target = new URL(app.publicUrl)
-  } catch {
-    ElMessage.error('模块公网入口配置无效')
-    return
-  }
-  const localHttp = target.protocol === 'http:' && ['localhost', '127.0.0.1', '::1'].includes(target.hostname)
-  if ((!localHttp && target.protocol !== 'https:') || target.username || target.password) {
-    ElMessage.error('模块公网入口必须是 HTTPS URL')
-    return
-  }
-  if (AI_CODES.has(app.appCode) && app.appCode !== 'AI_HUB') target.searchParams.set('fn', app.appCode)
-  const tab = window.open(target.href, '_blank', 'noopener,noreferrer')
-  if (!tab) ElMessage.warning('浏览器拦截了新页面，请允许此站点弹出窗口')
+  void openWorkbenchApp(app)
 }
 
 onMounted(async () => {
