@@ -19,11 +19,24 @@ function openHref(href, replace) {
 }
 
 export async function openAiLaunch(appCode, replace = false) {
-  const launch = await http.post('/cloud-launch/issue', { appCode })
-  const target = new URL('/gooci/enter', launch.publicOrigin)
-  target.searchParams.set('code', launch.code)
-  if (appCode !== 'AI_HUB') target.searchParams.set('fn', appCode)
-  return openHref(target.href, replace)
+  const tab = replace ? null : window.open('about:blank', '_blank')
+  if (!replace && !tab) {
+    ElMessage.warning('浏览器拦截了新页面，请允许此站点弹出窗口')
+    return false
+  }
+  if (tab) tab.opener = null
+  try {
+    const launch = await http.post('/cloud-launch/issue', { appCode })
+    const target = new URL('/gooci/enter', launch.publicOrigin)
+    target.searchParams.set('code', launch.code)
+    if (appCode !== 'AI_HUB') target.searchParams.set('fn', appCode)
+    if (tab) tab.location.replace(target.href)
+    else window.location.replace(target.href)
+    return true
+  } catch (error) {
+    if (tab) tab.close()
+    throw error
+  }
 }
 
 export function openPublicModule(url, fn = '', replace = false) {
